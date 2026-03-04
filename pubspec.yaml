@@ -1,0 +1,80 @@
+name: pm_captions
+description: AI Caption Generator for voiceover videos - Add captions to your videos instantly.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Video & Audio Processing
+  video_player: ^2.9.2
+  video_thumbnail: ^0.5.3
+  image_picker: ^1.1.2
+  file_picker: ^8.1.6
+
+  # Networking & API
+  dio: ^5.7.0
+  connectivity_plus: ^6.1.1
+
+  # State Management
+  provider: ^6.1.2
+
+  # Local Storage
+  shared_preferences: ^2.3.4
+  sqflite: ^2.4.1
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+  # Permissions
+  permission_handler: ^11.3.1
+
+  # UI & Animation
+  lottie: ^3.2.0
+  shimmer: ^3.0.0
+  flutter_animate: ^4.5.2
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+  flutter_colorpicker: ^1.1.0
+  dotted_border: ^2.1.0
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  logger: ^2.5.0
+  equatable: ^2.0.7
+  get_it: ^8.0.3
+
+  # Media
+  gallery_saver_plus: ^3.2.3
+  share_plus: ^10.1.3
+  open_file: ^3.5.10
+
+  # Navigation
+  go_router: ^14.7.1
+  ffmpeg_kit_flutter_new: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  mockito: ^5.4.4
+  build_runner: ^2.4.14
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/animations/
+    - assets/images/
+    - assets/logo/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/logo/pm.png"
+  min_sdk_android: 21
