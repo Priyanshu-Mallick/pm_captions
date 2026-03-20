@@ -23,9 +23,6 @@ class ExportRepository {
   }) async {
     _log.i('Starting video export with subtitles');
 
-    // Generate SRT file
-    final srtPath = await SrtGenerator.generateSrt(captions);
-
     // Create output path
     final outputPath = await FileUtils.createOutputFilePath(
       settings.outputFormat,
@@ -34,10 +31,10 @@ class ExportRepository {
     // Determine if we need to compress
     final needsCompression = settings.resolution != ExportResolution.original;
 
-    // Burn subtitles
+    // Burn subtitles using drawtext filter
     await FFmpegUtils.burnSubtitles(
       videoPath: videoPath,
-      srtPath: srtPath,
+      captions: captions,
       style: style,
       outputPath: outputPath,
       onProgress: (p) {

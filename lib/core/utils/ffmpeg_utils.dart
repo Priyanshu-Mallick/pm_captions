@@ -6,10 +6,11 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:logger/logger.dart';
 
+import '../../data/models/caption_model.dart';
 import '../../data/models/caption_style_model.dart';
 import '../../data/models/export_settings_model.dart';
 import '../errors/exceptions.dart';
-import '../extensions/caption_style_extension.dart';
+import 'caption_image_renderer.dart';
 import 'file_utils.dart';
 
 /// Utility class for FFmpeg operations.
@@ -54,30 +55,145 @@ class FFmpegUtils {
     return outputPath;
   }
 
-  /// Burns subtitles into a video using an SRT file and caption style.
+  /// Returns the video bitrate in bits/s, or null if unavailable.
+  static Future<String?> _getVideoBitrate(String videoPath) async {
+    final session = await FFprobeKit.getMediaInformation(videoPath);
+    final info = session.getMediaInformation();
+    if (info == null) return null;
+
+    final streams = info.getStreams();
+    for (final stream in streams) {
+      final type = stream.getType();
+      if (type == 'video') {
+        final bitrate = stream.getBitrate();
+        if (bitrate != null) return bitrate;
+      }
+    }
+
+    return info.getBitrate();
+  }
+
+  /// Returns the video resolution as (width, height).
+  static Future<(int, int)> _getVideoResolution(String videoPath) async {
+    final session = await FFprobeKit.getMediaInformation(videoPath);
+    final info = session.getMediaInformation();
+    if (info == null) return (1920, 1080);
+
+    final streams = info.getStreams();
+    for (final stream in streams) {
+      if (stream.getType() == 'video') {
+        final width = stream.getWidth();
+        final height = stream.getHeight();
+        if (width != null && height != null) {
+          return (width, height);
+        }
+      }
+    }
+    return (1920, 1080);
+  }
+
+  /// Burns captions into a video using Flutter-rendered overlay images.
   ///
-  /// Generates an ASS-style `force_style` filter from the [style] parameter.
+  /// Each caption is rendered as a transparent PNG using Flutter's own
+  /// TextPainter + Canvas (the same Skia renderer used in the preview),
+  /// then composited onto the video with FFmpeg's overlay filter.
+  /// This produces pixel-perfect output matching the in-app preview.
   static Future<void> burnSubtitles({
     required String videoPath,
-    required String srtPath,
+    required List<CaptionModel> captions,
     required CaptionStyleModel style,
     required String outputPath,
     void Function(double)? onProgress,
   }) async {
     await FileUtils.ensureDirectoryExists(outputPath);
 
-    final forceStyle = style.toFFmpegStyle();
-    // Escape special characters in paths for the subtitles filter
-    final escapedSrtPath = srtPath
-        .replaceAll("'", "\\'")
-        .replaceAll(':', '\\:');
+    if (captions.isEmpty) {
+      _log.w('No captions to burn, copying video as-is');
+      await File(videoPath).copy(outputPath);
+      return;
+    }
 
-    final command =
-        '-y -i "$videoPath" '
-        '-vf "subtitles=\'$escapedSrtPath\':force_style=\'$forceStyle\'" '
-        '-c:a copy "$outputPath"';
+    // Probe video resolution and bitrate
+    final (videoWidth, videoHeight) = await _getVideoResolution(videoPath);
 
-    _log.i('Burning subtitles: $command');
+    // Render all caption images using Flutter's text engine
+    _log.i('Rendering ${captions.length} caption images...');
+    final captionImages = await CaptionImageRenderer.renderAll(
+      captions: captions,
+      style: style,
+      videoWidth: videoWidth,
+      videoHeight: videoHeight,
+    );
+
+    if (captionImages.isEmpty) {
+      _log.w('No caption images rendered, copying video as-is');
+      await File(videoPath).copy(outputPath);
+      return;
+    }
+
+    // Probe original video bitrate to preserve quality
+    final originalBitrate = await _getVideoBitrate(videoPath);
+    final bitrateArgs = <String>[];
+    if (originalBitrate != null) {
+      final parsed = int.tryParse(originalBitrate);
+      if (parsed != null) {
+        bitrateArgs.addAll([
+          '-b:v', '$parsed',
+          '-maxrate', '$parsed',
+          '-bufsize', '${parsed * 2}',
+        ]);
+      } else {
+        bitrateArgs.addAll(['-crf', '17']);
+      }
+    } else {
+      bitrateArgs.addAll(['-crf', '17']);
+    }
+
+    // Build FFmpeg command with chained overlay filters.
+    // Each caption image is an input, overlaid at its (x,y) position
+    // with an enable condition for its time window.
+    final args = <String>['-y', '-i', videoPath];
+
+    // Add each caption image as an input
+    for (final img in captionImages) {
+      args.addAll(['-i', img.imagePath]);
+    }
+
+    // Build filter_complex with chained overlays
+    final filterParts = <String>[];
+    for (var i = 0; i < captionImages.length; i++) {
+      final img = captionImages[i];
+      final startSec =
+          (img.startTime.inMilliseconds / 1000.0).toStringAsFixed(3);
+      final endSec =
+          (img.endTime.inMilliseconds / 1000.0).toStringAsFixed(3);
+
+      // Input label: [0] is video, [1]..[N] are caption images
+      final inputLabel = i == 0 ? '[0]' : '[v$i]';
+      final imgLabel = '[${i + 1}]';
+      final outputLabel =
+          i == captionImages.length - 1 ? '[vout]' : '[v${i + 1}]';
+
+      filterParts.add(
+        "$inputLabel${imgLabel}overlay=${img.x}:${img.y}"
+        ":enable='between(t,$startSec,$endSec)'$outputLabel",
+      );
+    }
+
+    final filterComplex = filterParts.join(';');
+
+    args.addAll([
+      '-filter_complex', filterComplex,
+      '-map', '[vout]',
+      '-map', '0:a?',
+      '-c:v', 'libx264',
+      '-preset', 'medium',
+      ...bitrateArgs,
+      '-c:a', 'copy',
+      outputPath,
+    ]);
+
+    _log.i('Burning subtitles: ${captionImages.length} overlay images');
 
     if (onProgress != null) {
       final duration = await getVideoDuration(videoPath);
@@ -92,7 +208,7 @@ class FFmpegUtils {
       });
     }
 
-    final session = await FFmpegKit.execute(command);
+    final session = await FFmpegKit.executeWithArguments(args);
     final returnCode = await session.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
@@ -103,6 +219,13 @@ class FFmpegUtils {
         returnCode: returnCode?.getValue(),
       );
     }
+
+    // Clean up caption images
+    try {
+      for (final img in captionImages) {
+        await File(img.imagePath).delete();
+      }
+    } catch (_) {}
 
     _log.i('Subtitles burned to: $outputPath');
   }
@@ -159,25 +282,28 @@ class FFmpegUtils {
   }) async {
     await FileUtils.ensureDirectoryExists(outputPath);
 
-    // Build filter chain
     final filters = <String>[];
     final scaleFilter = settings.scaleFilter;
     if (scaleFilter != null) {
       filters.add(scaleFilter);
     }
 
-    final filterStr = filters.isNotEmpty ? '-vf "${filters.join(',')}"' : '';
+    final args = [
+      '-y',
+      '-i', videoPath,
+      if (filters.isNotEmpty) ...['-vf', filters.join(',')],
+      '-c:v', 'libx264',
+      '-preset', 'medium',
+      '-crf', '17',
+      '-b:v', settings.videoBitrate,
+      '-maxrate', settings.videoBitrate,
+      '-r', '${settings.fps}',
+      '-c:a', 'copy',
+      outputPath,
+    ];
 
-    final command =
-        '-y -i "$videoPath" '
-        '$filterStr '
-        '-b:v ${settings.videoBitrate} '
-        '-r ${settings.fps} '
-        '-c:a copy "$outputPath"';
+    _log.i('Compressing video: ${args.join(' ')}');
 
-    _log.i('Compressing video: $command');
-
-    // Set up progress callback if provided
     if (onProgress != null) {
       final duration = await getVideoDuration(videoPath);
       final totalMs = duration.inMilliseconds.toDouble();
@@ -191,7 +317,7 @@ class FFmpegUtils {
       });
     }
 
-    final session = await FFmpegKit.execute(command);
+    final session = await FFmpegKit.executeWithArguments(args);
     final returnCode = await session.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
