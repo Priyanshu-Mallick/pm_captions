@@ -12,6 +12,8 @@ import '../../../data/repositories/project_repository.dart';
 import '../../providers/processing_provider.dart';
 import '../../providers/video_provider.dart';
 import '../../widgets/common/gradient_background.dart';
+import '../../widgets/processing/processing_steps_widget.dart';
+import '../../widgets/processing/progress_circle_widget.dart';
 
 /// Screen that shows processing progress through the pipeline.
 class ProcessingScreen extends StatefulWidget {
@@ -82,10 +84,10 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     // Progress circle
-                    _buildProgressCircle(provider),
+                    ProgressCircleWidget(provider: provider),
                     const SizedBox(height: 48),
                     // Steps
-                    _buildSteps(provider),
+                    ProcessingStepsWidget(provider: provider),
                     const SizedBox(height: 48),
                     // Status message
                     Text(
@@ -153,160 +155,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildProgressCircle(ProcessingProvider provider) {
-    return SizedBox(
-      width: 140,
-      height: 140,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 140,
-            height: 140,
-            child: CircularProgressIndicator(
-              value: provider.progress,
-              strokeWidth: 6,
-              backgroundColor: AppColors.divider,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                provider.currentState == ProcessingState.error
-                    ? AppColors.error
-                    : AppColors.primary,
-              ),
-            ),
-          ),
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '${(provider.progress * 100).round()}%',
-                style: GoogleFonts.poppins(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Text(
-                AppStrings.processing,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ).animate().scale(
-      begin: const Offset(0.8, 0.8),
-      end: const Offset(1, 1),
-      duration: 600.ms,
-      curve: Curves.elasticOut,
-    );
-  }
-
-  Widget _buildSteps(ProcessingProvider provider) {
-    return Column(
-      children: [
-        _StepItem(
-          label: AppStrings.extractingAudio,
-          isActive: provider.currentState == ProcessingState.extractingAudio,
-          isDone:
-              provider.currentState.index >
-              ProcessingState.extractingAudio.index,
-        ),
-        const SizedBox(height: 12),
-        _StepItem(
-          label: AppStrings.transcribingSpeech,
-          isActive: provider.currentState == ProcessingState.transcribing,
-          isDone:
-              provider.currentState.index > ProcessingState.transcribing.index,
-        ),
-        const SizedBox(height: 12),
-        _StepItem(
-          label: AppStrings.generatingCaptions,
-          isActive: provider.currentState == ProcessingState.groupingCaptions,
-          isDone:
-              provider.currentState.index >
-              ProcessingState.groupingCaptions.index,
-        ),
-        const SizedBox(height: 12),
-        _StepItem(
-          label: AppStrings.finalizing,
-          isActive: provider.currentState == ProcessingState.done,
-          isDone: provider.currentState == ProcessingState.done,
-        ),
-      ],
-    ).animate().fadeIn(delay: 300.ms, duration: 400.ms);
-  }
-}
-
-class _StepItem extends StatelessWidget {
-  final String label;
-  final bool isActive;
-  final bool isDone;
-
-  const _StepItem({
-    required this.label,
-    required this.isActive,
-    required this.isDone,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color:
-                isDone
-                    ? AppColors.success
-                    : isActive
-                    ? AppColors.primary
-                    : AppColors.surface,
-            border: Border.all(
-              color:
-                  isDone
-                      ? AppColors.success
-                      : isActive
-                      ? AppColors.primary
-                      : AppColors.divider,
-            ),
-          ),
-          child:
-              isDone
-                  ? const Icon(Icons.check, size: 16, color: Colors.white)
-                  : isActive
-                  ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                  : null,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color:
-                  isDone || isActive
-                      ? AppColors.textPrimary
-                      : AppColors.textHint,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

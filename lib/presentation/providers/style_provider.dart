@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 
+import '../../core/constants/caption_templates.dart';
 import '../../data/models/caption_style_model.dart';
 
 /// Manages caption styling configuration.
@@ -23,7 +24,7 @@ class StyleProvider extends ChangeNotifier {
 
   /// Applies a predefined template.
   void applyTemplate(CaptionTemplate template) {
-    _currentStyle = CaptionStyleModel.fromTemplate(template);
+    _currentStyle = CaptionTemplates.fromTemplate(template);
     _log.i('Applied template: ${template.name}');
     notifyListeners();
   }

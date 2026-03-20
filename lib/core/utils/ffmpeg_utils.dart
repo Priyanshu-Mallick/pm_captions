@@ -9,6 +9,7 @@ import 'package:logger/logger.dart';
 import '../../data/models/caption_style_model.dart';
 import '../../data/models/export_settings_model.dart';
 import '../errors/exceptions.dart';
+import '../extensions/caption_style_extension.dart';
 import 'file_utils.dart';
 
 /// Utility class for FFmpeg operations.

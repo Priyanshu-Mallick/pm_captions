@@ -1,5 +1,6 @@
 import 'package:logger/logger.dart';
 
+import '../../core/utils/caption_parser_utils.dart';
 import '../datasources/whisper_datasource.dart';
 import '../models/caption_model.dart';
 import '../models/caption_style_model.dart';
@@ -35,6 +36,6 @@ class TranscriptionRepository {
     List<WordTimestampModel> words,
     CaptionStyleModel style,
   ) {
-    return WhisperDatasource.groupWordsIntoCaptions(words, style);
+    return CaptionParserUtils.groupWordsIntoCaptions(words, style);
   }
 }

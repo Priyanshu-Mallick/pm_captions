@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/constants/app_dimensions.dart';
@@ -10,8 +9,6 @@ import '../../data/models/caption_model.dart';
 /// Supports undo/redo, inline editing, splitting, merging,
 /// and position-based caption lookup.
 class CaptionProvider extends ChangeNotifier {
-  static final _log = Logger();
-
   // ── State ─────────────────────────────────────────────────────────
   List<CaptionModel> _captions = [];
   int? _selectedCaptionIndex;
