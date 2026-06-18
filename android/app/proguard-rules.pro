@@ -27,3 +27,6 @@
 -keepclassmembers class * {
     @androidx.annotation.Keep *;
 }
+
+# ── Google Play Core (In-App Updates) ────────────────────────────────────────
+-keep class com.google.android.play.core.** { *; }
