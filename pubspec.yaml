@@ -1,7 +1,7 @@
 name: pm_captions
 description: AI Caption Generator for voiceover videos - Add captions to your videos instantly.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.2.0+6
 
 environment:
   sdk: ^3.7.0
@@ -48,6 +48,10 @@ dependencies:
   logger: ^2.5.0
   equatable: ^2.0.7
   get_it: ^8.0.3
+  flutter_dotenv: ^5.1.0
+
+  # Monitoring & Crash Reporting
+  sentry_flutter: ^8.9.0
 
   # Media
   gallery_saver_plus: ^3.2.3
@@ -58,6 +62,8 @@ dependencies:
   go_router: ^14.7.1
   ffmpeg_kit_flutter_new: ^2.0.0
   url_launcher: ^6.3.2
+  in_app_update: ^4.2.5
+  in_app_review: ^2.0.12
 
 dev_dependencies:
   flutter_test:
@@ -73,9 +79,12 @@ flutter:
     - assets/animations/
     - assets/images/
     - assets/logo/
+    - .env
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
+  remove_alpha_ios: true
   image_path: "assets/logo/pm.png"
   min_sdk_android: 21
+

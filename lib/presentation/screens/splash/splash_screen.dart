@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/update_service.dart';
 
 /// Animated splash screen with gradient logo text.
 class SplashScreen extends StatefulWidget {
@@ -26,17 +27,20 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
+    // Check for critical app updates
+    final updateTriggered = await UpdateService.checkForAndroidUpdate(context);
+    if (updateTriggered) {
+      return; // Stop navigation flow, user is blocked by update screen/Play Store dialog
+    }
+
+    if (!mounted) return;
+
     final prefs = await SharedPreferences.getInstance();
     final seenOnboarding = prefs.getBool('seen_onboarding') ?? false;
 
     if (mounted) {
-      if (seenOnboarding) {
-        context.go('/home');
-      } else {
-        // Mark onboarding as seen and go to home
-        await prefs.setBool('seen_onboarding', true);
-        if (mounted) context.go('/home');
-      }
+      // First-time users see onboarding, which owns marking the flag complete.
+      context.go(seenOnboarding ? '/home' : '/onboarding');
     }
   }
 

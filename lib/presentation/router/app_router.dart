@@ -1,19 +1,29 @@
 import 'package:go_router/go_router.dart';
 
 import '../screens/splash/splash_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/video_picker/video_picker_screen.dart';
 import '../screens/processing/processing_screen.dart';
 import '../screens/editor/caption_editor_screen.dart';
 import '../screens/export/export_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/update/update_required_screen.dart';
 
 /// Application router configuration using go_router.
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/update-required',
+      builder: (context, state) => const UpdateRequiredScreen(),
+    ),
     GoRoute(
       path: '/video-picker',
       builder: (context, state) => const VideoPickerScreen(),

@@ -5,7 +5,7 @@ class AppStrings {
   AppStrings._();
 
   // ── App ───────────────────────────────────────────────────────────
-  static const String appName = 'AI Captions';
+  static const String appName = 'PM Captions';
   static const String appTagline = 'Add captions to your videos instantly';
 
   // ── Home ──────────────────────────────────────────────────────────
@@ -91,6 +91,14 @@ class AppStrings {
   static const String appVersion = 'Version 1.0.0';
   static const String privacyPolicy = 'Privacy Policy';
 
+  // ── Update Required ───────────────────────────────────────────────
+  static const String updateRequiredTitle = 'Update Required';
+  static const String updateRequiredMessage =
+      'A new version of PM Captions is available. Please update the app to continue using its features.';
+  static const String updateButton = 'Update Now';
+  static const String updateFailedMessage =
+      'Could not open the Play Store. Please open the Play Store manually to update.';
+
   // ── Errors ────────────────────────────────────────────────────────
   static const String noApiKeyMessage =
       'Please add your free Groq API key in Settings. Get one at console.groq.com';
@@ -140,4 +148,17 @@ class AppStrings {
   static const String getStarted = 'Get Started';
   static const String next = 'Next';
   static const String skip = 'Skip';
+  static const String skipForNow = 'Skip for now';
+
+  // ── Onboarding API Key Step ───────────────────────────────────────
+  static const String onboardingKeyTitle = 'Add your Groq key';
+  static const String onboardingKeySubtitle =
+      'PM Captions uses your own free Groq API key to generate captions. '
+      'It takes about 30 seconds and you can change it later in Settings.';
+  static const String saveAndContinue = 'Save & Continue';
+
+  // ── API Key Reminder Banner ───────────────────────────────────────
+  static const String apiKeyReminderTitle = 'Groq API key needed';
+  static const String apiKeyReminderSubtitle =
+      'Add your free Groq API key to start generating captions.';
 }

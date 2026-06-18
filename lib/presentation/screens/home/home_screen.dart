@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../widgets/common/gradient_background.dart';
+import '../../widgets/home/api_key_reminder_banner.dart';
 import '../../widgets/home/action_buttons_widget.dart';
 import '../../widgets/home/hero_card_widget.dart';
 import '../../widgets/home/recent_projects_widget.dart';
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildAppBar(),
                 const SizedBox(height: AppDimensions.paddingLG),
+                const ApiKeyReminderBanner(),
                 const HeroCardWidget(),
                 const SizedBox(height: AppDimensions.paddingLG),
                 const ActionButtonsWidget(),

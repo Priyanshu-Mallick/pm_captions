@@ -4,12 +4,13 @@ import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:logger/logger.dart';
 
 import '../../data/models/caption_model.dart';
 import '../../data/models/caption_style_model.dart';
 import '../../data/models/export_settings_model.dart';
+import '../errors/error_reporter.dart';
 import '../errors/exceptions.dart';
+import 'app_logger.dart';
 import 'caption_image_renderer.dart';
 import 'file_utils.dart';
 
@@ -20,7 +21,7 @@ import 'file_utils.dart';
 class FFmpegUtils {
   FFmpegUtils._();
 
-  static final _log = Logger();
+  static final _log = appLogger;
 
   /// Extracts audio from a video as 16kHz mono WAV for Whisper.
   ///
@@ -39,9 +40,11 @@ class FFmpegUtils {
     if (!ReturnCode.isSuccess(returnCode)) {
       final logs = await session.getAllLogsAsString();
       _log.e('Audio extraction failed: $logs');
-      throw AudioExtractionException(
+      final exception = AudioExtractionException(
         details: 'FFmpeg return code: ${returnCode?.getValue()}',
       );
+      ErrorReporter.captureException(exception, hint: logs);
+      throw exception;
     }
 
     final outputFile = File(outputPath);
@@ -214,10 +217,12 @@ class FFmpegUtils {
     if (!ReturnCode.isSuccess(returnCode)) {
       final logs = await session.getAllLogsAsString();
       _log.e('Subtitle burning failed: $logs');
-      throw FFmpegException(
+      final exception = FFmpegException(
         command: 'burnSubtitles',
         returnCode: returnCode?.getValue(),
       );
+      ErrorReporter.captureException(exception, hint: logs);
+      throw exception;
     }
 
     // Clean up caption images
@@ -323,10 +328,12 @@ class FFmpegUtils {
     if (!ReturnCode.isSuccess(returnCode)) {
       final logs = await session.getAllLogsAsString();
       _log.e('Video compression failed: $logs');
-      throw FFmpegException(
+      final exception = FFmpegException(
         command: 'compressVideo',
         returnCode: returnCode?.getValue(),
       );
+      ErrorReporter.captureException(exception, hint: logs);
+      throw exception;
     }
 
     _log.i('Video compressed to: $outputPath');

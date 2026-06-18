@@ -6,11 +6,25 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../providers/export_provider.dart';
+import '../../../core/services/review_service.dart';
 
-class ExportCompleteWidget extends StatelessWidget {
+class ExportCompleteWidget extends StatefulWidget {
   final ExportProvider exportProv;
 
   const ExportCompleteWidget({super.key, required this.exportProv});
+
+  @override
+  State<ExportCompleteWidget> createState() => _ExportCompleteWidgetState();
+}
+
+class _ExportCompleteWidgetState extends State<ExportCompleteWidget> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ReviewService.triggerInAppReview();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +53,7 @@ class ExportCompleteWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   // Auto-saved chip
-                  if (exportProv.savedToGallery)
+                  if (widget.exportProv.savedToGallery)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -76,7 +90,7 @@ class ExportCompleteWidget extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => exportProv.shareExported(context),
+                      onPressed: () => widget.exportProv.shareExported(context),
                       icon: const Icon(Icons.share),
                       label: const Text(AppStrings.share),
                       style: ElevatedButton.styleFrom(
@@ -92,7 +106,7 @@ class ExportCompleteWidget extends StatelessWidget {
                     width: double.infinity,
                     child: OutlinedButton(
                       onPressed: () {
-                        exportProv.reset();
+                        widget.exportProv.reset();
                         context.go('/home');
                       },
                       style: OutlinedButton.styleFrom(

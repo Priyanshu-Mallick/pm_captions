@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:logger/logger.dart';
 
+import '../../core/errors/error_reporter.dart';
 import '../../core/errors/exceptions.dart';
+import '../../core/utils/app_logger.dart';
 import '../../core/utils/ffmpeg_utils.dart';
 import '../../data/datasources/whisper_datasource.dart';
 import '../../data/models/caption_model.dart';
@@ -22,7 +23,7 @@ enum ProcessingState {
 
 /// Manages the video processing pipeline: audio extraction → transcription → captioning.
 class ProcessingProvider extends ChangeNotifier {
-  static final _log = Logger();
+  static final _log = appLogger;
   final TranscriptionRepository _transcriptionRepo;
 
   ProcessingProvider({TranscriptionRepository? transcriptionRepo})
@@ -139,12 +140,14 @@ class ProcessingProvider extends ChangeNotifier {
         'Processing complete: ${_captions.length} captions from '
         '${_rawWords.length} words',
       );
-    } on AppException catch (e) {
+    } on AppException catch (e, stack) {
       _log.e('Processing failed: ${e.message}');
+      ErrorReporter.captureException(e, stack: stack);
       _errorMessage = e.userFriendlyMessage;
       _updateState(ProcessingState.error, _progress, e.userFriendlyMessage);
-    } catch (e) {
+    } catch (e, stack) {
       _log.e('Processing failed unexpectedly', error: e);
+      ErrorReporter.captureException(e, stack: stack);
       _errorMessage = 'An unexpected error occurred. Please try again.';
       _updateState(ProcessingState.error, _progress, _errorMessage!);
     }

@@ -1,5 +1,4 @@
 {
-  "originHash" : "287a63395c1e2bd3c6fc61b986e02414d99a96186e1369c27b058dd2e7dd12b9",
   "pins" : [
     {
       "identity" : "dkcamera",
@@ -38,6 +37,15 @@
       }
     },
     {
+      "identity" : "sentry-cocoa",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/getsentry/sentry-cocoa",
+      "state" : {
+        "revision" : "dad229c665bfd043c5d80ac7aa77717cbd19a1c3",
+        "version" : "8.58.3"
+      }
+    },
+    {
       "identity" : "swiftygif",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/kirualex/SwiftyGif.git",
@@ -56,5 +64,5 @@
       }
     }
   ],
-  "version" : 3
+  "version" : 2
 }

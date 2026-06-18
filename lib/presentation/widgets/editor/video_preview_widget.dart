@@ -10,8 +10,27 @@ import '../../providers/style_provider.dart';
 import '../../providers/video_provider.dart';
 import '../caption/animated_caption.dart';
 
-class VideoPreviewWidget extends StatelessWidget {
+class VideoPreviewWidget extends StatefulWidget {
   const VideoPreviewWidget({super.key});
+
+  @override
+  State<VideoPreviewWidget> createState() => _VideoPreviewWidgetState();
+}
+
+class _VideoPreviewWidgetState extends State<VideoPreviewWidget> {
+  VideoProvider? _videoProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _videoProvider = Provider.of<VideoProvider>(context, listen: false);
+  }
+
+  @override
+  void dispose() {
+    _videoProvider?.reset();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

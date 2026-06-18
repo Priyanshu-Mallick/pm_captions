@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
-import 'package:logger/logger.dart';
+
+import '../errors/error_reporter.dart';
+import '../utils/app_logger.dart';
 
 /// Pre-configured [Dio] HTTP client for API calls.
 class ApiClient {
-  static final _log = Logger();
+  static final _log = appLogger;
 
   /// Creates a [Dio] instance configured for the Groq API (free, OpenAI-compatible).
   static Dio create({String? apiKey}) {
@@ -30,6 +32,12 @@ class ApiClient {
           _log.e(
             'API Error: ${error.response?.statusCode} ${error.message}',
             error: error,
+          );
+          // Report as a non-fatal so handled API failures are visible.
+          ErrorReporter.captureException(
+            error,
+            stack: error.stackTrace,
+            hint: 'Dio request to ${error.requestOptions.path}',
           );
           handler.next(error);
         },

@@ -1,4 +1,4 @@
-package com.aicaptions.ai_captions_app
+package com.pmcaptions.app
 
 import io.flutter.embedding.android.FlutterActivity
 
