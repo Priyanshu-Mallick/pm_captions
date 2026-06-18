@@ -151,6 +151,9 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
       return;
     }
 
+    // Pause the video before navigating away.
+    videoProvider.pause();
+
     context.push(
       '/processing',
       extra: {

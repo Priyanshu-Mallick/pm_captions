@@ -17,8 +17,15 @@ class VideoPreviewWidget extends StatefulWidget {
   State<VideoPreviewWidget> createState() => _VideoPreviewWidgetState();
 }
 
-class _VideoPreviewWidgetState extends State<VideoPreviewWidget> {
+class _VideoPreviewWidgetState extends State<VideoPreviewWidget>
+    with WidgetsBindingObserver {
   VideoProvider? _videoProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didChangeDependencies() {
@@ -27,7 +34,17 @@ class _VideoPreviewWidgetState extends State<VideoPreviewWidget> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pause video when the app goes to background or is inactive.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _videoProvider?.pause();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _videoProvider?.reset();
     super.dispose();
   }

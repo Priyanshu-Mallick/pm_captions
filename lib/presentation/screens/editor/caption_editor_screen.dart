@@ -117,6 +117,7 @@ class _CaptionEditorScreenState extends State<CaptionEditorScreen>
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios),
         onPressed: () async {
+          context.read<VideoProvider>().pause();
           await _saveProject();
           if (mounted) context.go('/home');
         },
@@ -150,6 +151,9 @@ class _CaptionEditorScreenState extends State<CaptionEditorScreen>
         ),
         TextButton(
           onPressed: () async {
+            // Pause video before pushing the export screen, since
+            // context.push keeps this screen alive in the stack.
+            context.read<VideoProvider>().pause();
             // Await the DB write so the export screen always reloads
             // the latest captions — prevents a race condition.
             await _saveProject();
