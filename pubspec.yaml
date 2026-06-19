@@ -51,7 +51,7 @@ dependencies:
   flutter_dotenv: ^5.1.0
 
   # Monitoring & Crash Reporting
-  sentry_flutter: ^8.9.0
+  sentry_flutter: ^9.22.0
 
   # Media
   gallery_saver_plus: ^3.2.3

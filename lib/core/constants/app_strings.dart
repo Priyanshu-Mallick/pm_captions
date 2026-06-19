@@ -90,6 +90,8 @@ class AppStrings {
   static const String about = 'About';
   static const String appVersion = 'Version 1.0.0';
   static const String privacyPolicy = 'Privacy Policy';
+  static const String privacyPolicyUrl =
+      'https://app.notion.com/p/Privacy-Policy-for-PM-Captions-384ed999691e800d83c8ca7b75e84a64';
 
   // ── Update Required ───────────────────────────────────────────────
   static const String updateRequiredTitle = 'Update Required';

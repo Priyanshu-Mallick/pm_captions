@@ -73,7 +73,10 @@ class ErrorDialog {
 
   /// Shows a snackbar error message.
   static void showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: AppColors.error,
@@ -83,7 +86,7 @@ class ErrorDialog {
           label: 'Dismiss',
           textColor: AppColors.textPrimary,
           onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            messenger.hideCurrentSnackBar();
           },
         ),
       ),
@@ -92,7 +95,10 @@ class ErrorDialog {
 
   /// Shows a success snackbar.
   static void showSuccess(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    messenger.showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: AppColors.success,

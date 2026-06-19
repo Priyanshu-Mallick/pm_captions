@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
@@ -38,7 +39,12 @@ class AboutWidget extends StatelessWidget {
             ),
           ),
           trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
-          onTap: () {},
+          onTap: () async {
+            final url = Uri.parse(AppStrings.privacyPolicyUrl);
+            if (await canLaunchUrl(url)) {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            }
+          },
         ),
       ],
     );

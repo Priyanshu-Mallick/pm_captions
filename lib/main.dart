@@ -56,6 +56,8 @@ Future<void> main() async {
     options.debug = !kReleaseMode;
     // Sample a fraction of transactions for performance monitoring.
     options.tracesSampleRate = 0.2;
+    // Enable tombstone collection for richer native crash reports
+    options.enableTombstone = true;
   }, appRunner: () => runApp(const AICaptionsApp()));
 
   // // TODO(verify-sentry): Temporary — fires one test event so the Sentry

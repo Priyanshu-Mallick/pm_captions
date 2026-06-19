@@ -30,3 +30,7 @@
 
 # ── Google Play Core (In-App Updates) ────────────────────────────────────────
 -keep class com.google.android.play.core.** { *; }
+
+# ── FFmpegKit native bridge ──────────────────────────────────────────────────
+-keep class com.arthenica.ffmpegkit.** { *; }
+-dontwarn com.arthenica.ffmpegkit.**
