@@ -157,8 +157,13 @@ class WhisperDatasource implements SpeechToTextDatasource {
           detectedLanguage: detectedLang,
         );
       } on DioException catch (e) {
+        final statusCode = e.response?.statusCode;
+        // 401/403 means the key is invalid — retrying won't help.
+        if (statusCode == 401 || statusCode == 403) {
+          throw InvalidApiKeyException(statusCode: statusCode!);
+        }
         lastException = ApiException(
-          statusCode: e.response?.statusCode,
+          statusCode: statusCode,
           responseBody: e.response?.data?.toString(),
         );
         _log.w('Transcription attempt ${attempt + 1} failed', error: e);

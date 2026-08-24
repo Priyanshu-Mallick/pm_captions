@@ -44,12 +44,32 @@ class ApiException extends AppException {
 
   ApiException({this.statusCode, this.responseBody});
 
+  /// True for 4xx errors that are caused by a bad request or invalid key,
+  /// not by a bug in the app. These should NOT be reported to Sentry.
+  bool get isClientError => statusCode != null && statusCode! >= 400 && statusCode! < 500;
+
   @override
   String get message => 'API error: statusCode=$statusCode, body=$responseBody';
 
   @override
   String get userFriendlyMessage =>
       'Transcription failed. Please try again. (Error $statusCode)';
+}
+
+/// Thrown when the API rejects the key with 401 or 403.
+/// This is a user-configuration issue, not a code bug — do not report to Sentry.
+class InvalidApiKeyException extends AppException {
+  final int statusCode;
+
+  InvalidApiKeyException({required this.statusCode});
+
+  @override
+  String get message => 'API key rejected (HTTP $statusCode)';
+
+  @override
+  String get userFriendlyMessage =>
+      'Your Groq API key is invalid or has been revoked. '
+      'Please update it in Settings.';
 }
 
 /// Thrown when audio extraction from video fails.
@@ -145,6 +165,25 @@ class PermissionDeniedException extends AppException {
   String get userFriendlyMessage => 'Storage permission is required.';
 }
 
+/// Thrown when the video contains no audio track.
+class NoAudioTrackException extends AppException {
+  @override
+  String get message => 'Video contains no audio track';
+
+  @override
+  String get userFriendlyMessage =>
+      'This video has no audio track to transcribe. Please select a video with spoken audio.';
+}
+
+/// Thrown when an operation is cancelled by the user.
+class CancellationException extends AppException {
+  @override
+  String get message => 'Operation was cancelled';
+
+  @override
+  String get userFriendlyMessage => 'Operation cancelled';
+}
+
 /// Thrown when a generic/unexpected error occurs.
 class GenericException extends AppException {
   final String? details;
@@ -157,3 +196,4 @@ class GenericException extends AppException {
   @override
   String get userFriendlyMessage => 'Something went wrong. Please try again.';
 }
+

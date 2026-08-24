@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -16,6 +17,11 @@ import 'presentation/router/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Disable runtime HTTP font fetching — all Poppins weights are bundled as
+  // assets in google_fonts/. This prevents fatal HandshakeExceptions on
+  // restricted networks (e.g. cellular connections with strict TLS policies).
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Lock portrait orientation
   SystemChrome.setPreferredOrientations([

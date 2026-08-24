@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
-import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_min_gpl/ffmpeg_kit_config.dart';
+import 'package:ffmpeg_kit_flutter_new_min_gpl/ffprobe_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_min_gpl/return_code.dart';
 
 import '../../data/models/caption_model.dart';
 import '../../data/models/caption_style_model.dart';
@@ -23,19 +23,75 @@ class FFmpegUtils {
 
   static final _log = appLogger;
 
+  /// Checks whether the video contains at least one audio stream.
+  static Future<bool> hasAudioStream(String videoPath) async {
+    try {
+      final session = await FFprobeKit.getMediaInformation(videoPath);
+      final info = session.getMediaInformation();
+      if (info == null) return true; // If probe fails to read streams, let extraction attempt it
+
+      final streams = info.getStreams();
+      for (final stream in streams) {
+        if (stream.getType() == 'audio') {
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      _log.w('Could not probe audio stream: $e');
+      return true; // Fallback to allowing extraction attempt
+    }
+  }
+
   /// Extracts audio from a video as 16kHz mono WAV for Whisper.
   ///
   /// Saves to the temp directory and returns the output file path.
   static Future<String> extractAudio(String videoPath) async {
+    final inputFile = File(videoPath);
+    if (!await inputFile.exists()) {
+      throw AudioExtractionException(
+        details: 'Video file does not exist: $videoPath',
+      );
+    }
+
+    // Check if the video has an audio stream before attempting extraction
+    final hasAudio = await hasAudioStream(videoPath);
+    if (!hasAudio) {
+      _log.w('No audio stream found in video: $videoPath');
+      throw NoAudioTrackException();
+    }
+
     final outputPath = await FileUtils.createTempFilePath('wav');
 
-    final command =
-        '-y -i "$videoPath" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$outputPath"';
+    // Use argument array rather than interpolated string to prevent shell parsing/escaping
+    // bugs on paths with spaces, quotes, or Unicode characters.
+    final args = [
+      '-y',
+      '-i',
+      videoPath,
+      '-vn',
+      '-map',
+      '0:a:0',
+      '-acodec',
+      'pcm_s16le',
+      '-ar',
+      '16000',
+      '-ac',
+      '1',
+      '-max_muxing_queue_size',
+      '1024',
+      outputPath,
+    ];
 
-    _log.i('Extracting audio: $command');
+    _log.i('Extracting audio: ${args.join(' ')}');
 
-    final session = await FFmpegKit.execute(command);
+    final session = await FFmpegKit.executeWithArguments(args);
     final returnCode = await session.getReturnCode();
+
+    if (ReturnCode.isCancel(returnCode)) {
+      _log.i('Audio extraction was cancelled');
+      throw CancellationException();
+    }
 
     if (!ReturnCode.isSuccess(returnCode)) {
       final logs = await session.getAllLogsAsString();
@@ -214,6 +270,11 @@ class FFmpegUtils {
     final session = await FFmpegKit.executeWithArguments(args);
     final returnCode = await session.getReturnCode();
 
+    if (ReturnCode.isCancel(returnCode)) {
+      _log.i('Subtitle burning was cancelled');
+      throw CancellationException();
+    }
+
     if (!ReturnCode.isSuccess(returnCode)) {
       final logs = await session.getAllLogsAsString();
       _log.e('Subtitle burning failed: $logs');
@@ -258,14 +319,30 @@ class FFmpegUtils {
   ///
   /// Returns the path to the generated JPEG file.
   static Future<String> generateThumbnail(String videoPath) async {
+    final inputFile = File(videoPath);
+    if (!await inputFile.exists()) {
+      _log.w('Thumbnail generation skipped: file does not exist ($videoPath)');
+      return '';
+    }
+
     final outputPath = await FileUtils.createTempFilePath('jpg');
 
-    final command =
-        '-y -i "$videoPath" -ss 0.1 -vframes 1 -q:v 2 "$outputPath"';
+    final args = [
+      '-y',
+      '-ss',
+      '0.1',
+      '-i',
+      videoPath,
+      '-vframes',
+      '1',
+      '-q:v',
+      '2',
+      outputPath,
+    ];
 
-    _log.i('Generating thumbnail: $command');
+    _log.i('Generating thumbnail: ${args.join(' ')}');
 
-    final session = await FFmpegKit.execute(command);
+    final session = await FFmpegKit.executeWithArguments(args);
     final returnCode = await session.getReturnCode();
 
     if (!ReturnCode.isSuccess(returnCode)) {
@@ -324,6 +401,11 @@ class FFmpegUtils {
 
     final session = await FFmpegKit.executeWithArguments(args);
     final returnCode = await session.getReturnCode();
+
+    if (ReturnCode.isCancel(returnCode)) {
+      _log.i('Video compression was cancelled');
+      throw CancellationException();
+    }
 
     if (!ReturnCode.isSuccess(returnCode)) {
       final logs = await session.getAllLogsAsString();

@@ -140,12 +140,39 @@ class ProcessingProvider extends ChangeNotifier {
         'Processing complete: ${_captions.length} captions from '
         '${_rawWords.length} words',
       );
+    } on CancellationException {
+      _log.i('Processing was cancelled by user');
+      _updateState(ProcessingState.idle, 0.0, 'Cancelled');
     } on AppException catch (e, stack) {
+      if (_isCancelled) {
+        _log.i('Processing was cancelled, ignoring exception: ${e.message}');
+        _updateState(ProcessingState.idle, 0.0, 'Cancelled');
+        return;
+      }
       _log.e('Processing failed: ${e.message}');
-      ErrorReporter.captureException(e, stack: stack);
+      // Invalid key / missing audio / user content errors are user-configuration or input issues —
+      // do not clutter Sentry with them. Only report genuine unexpected failures.
+      final isUserError = e is InvalidApiKeyException ||
+          e is NoApiKeyException ||
+          e is NoAudioTrackException ||
+          e is UnsupportedVideoFormatException ||
+          e is FileSizeException ||
+          e is VideoTooLongException ||
+          e is InsufficientStorageException ||
+          e is PermissionDeniedException ||
+          e is CancellationException ||
+          (e is ApiException && e.isClientError);
+      if (!isUserError) {
+        ErrorReporter.captureException(e, stack: stack);
+      }
       _errorMessage = e.userFriendlyMessage;
       _updateState(ProcessingState.error, _progress, e.userFriendlyMessage);
     } catch (e, stack) {
+      if (_isCancelled) {
+        _log.i('Processing was cancelled, ignoring error: $e');
+        _updateState(ProcessingState.idle, 0.0, 'Cancelled');
+        return;
+      }
       _log.e('Processing failed unexpectedly', error: e);
       ErrorReporter.captureException(e, stack: stack);
       _errorMessage = 'An unexpected error occurred. Please try again.';

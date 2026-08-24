@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import '../errors/error_reporter.dart';
@@ -29,16 +31,27 @@ class ApiClient {
           handler.next(response);
         },
         onError: (error, handler) {
+          final statusCode = error.response?.statusCode;
           _log.e(
-            'API Error: ${error.response?.statusCode} ${error.message}',
+            'API Error: $statusCode ${error.message}',
             error: error,
           );
-          // Report as a non-fatal so handled API failures are visible.
-          ErrorReporter.captureException(
-            error,
-            stack: error.stackTrace,
-            hint: 'Dio request to ${error.requestOptions.path}',
-          );
+          // 4xx errors are client-side problems (invalid key, bad request) and
+          // connection drops (broken pipe, offline, timeouts) are environmental —
+          // not app bugs. Skip Sentry for those; the call site handles them.
+          final is4xx = statusCode != null && statusCode >= 400 && statusCode < 500;
+          final isNetworkDrop = error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.type == DioExceptionType.receiveTimeout ||
+              error.type == DioExceptionType.connectionError ||
+              error.error is SocketException;
+          if (!is4xx && !isNetworkDrop) {
+            ErrorReporter.captureException(
+              error,
+              stack: error.stackTrace,
+              hint: 'Dio request to ${error.requestOptions.path}',
+            );
+          }
           handler.next(error);
         },
       ),
