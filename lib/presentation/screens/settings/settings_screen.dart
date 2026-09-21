@@ -9,6 +9,7 @@ import '../../widgets/settings/about_widget.dart';
 import '../../widgets/settings/api_key_config_widget.dart';
 import '../../widgets/settings/data_management_widget.dart';
 import '../../widgets/settings/language_config_widget.dart';
+import '../../widgets/settings/pro_membership_widget.dart';
 
 /// Settings screen for API key, default language, and app management.
 class SettingsScreen extends StatefulWidget {
@@ -30,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
+                const SizedBox(height: 24),
+                const ProMembershipWidget(),
                 const SizedBox(height: 24),
                 const ApiKeyConfigWidget(),
                 const SizedBox(height: 24),

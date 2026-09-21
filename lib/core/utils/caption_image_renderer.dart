@@ -8,10 +8,19 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../data/models/caption_model.dart';
 import '../../data/models/caption_style_model.dart';
+import '../extensions/caption_style_extension.dart';
 
-/// Result of rendering a caption to an image.
+/// Result of rendering a caption to an overlay image.
+///
+/// Images are written as headerless raw RGBA, not PNG — the bundled FFmpeg
+/// build (ffmpeg-kit min-gpl) ships without a PNG decoder, so every overlay
+/// failed with "Decoder (codec png) not found" and the whole export died.
+/// Raw RGBA needs no decoder, which is why [width] and [height] are carried
+/// here: the rawvideo demuxer cannot infer them from the file.
 class CaptionImageResult {
   final String imagePath;
+  final int width;
+  final int height;
   final int x;
   final int y;
   final Duration startTime;
@@ -19,6 +28,8 @@ class CaptionImageResult {
 
   const CaptionImageResult({
     required this.imagePath,
+    required this.width,
+    required this.height,
     required this.x,
     required this.y,
     required this.startTime,
@@ -26,8 +37,8 @@ class CaptionImageResult {
   });
 }
 
-/// Renders captions as transparent PNG images using Flutter's own text
-/// rendering engine (TextPainter + Canvas).
+/// Renders captions as transparent raw-RGBA overlay images using Flutter's
+/// own text rendering engine (TextPainter + Canvas).
 ///
 /// This produces pixel-perfect output because it uses the exact same
 /// Skia-based renderer that the preview widgets use.
@@ -81,7 +92,7 @@ class CaptionImageRenderer {
           style: style,
           videoWidth: videoWidth,
           videoHeight: videoHeight,
-          outputPath: p.join(outputDir.path, 'cap_$i.png'),
+          outputPath: p.join(outputDir.path, 'cap_$i.rgba'),
           startTime: caption.startTime,
           endTime: caption.endTime,
         );
@@ -92,7 +103,7 @@ class CaptionImageRenderer {
     return results;
   }
 
-  /// Renders a static (non-animated) caption to a PNG.
+  /// Renders a static (non-animated) caption to a raw RGBA buffer.
   static Future<CaptionImageResult?> _renderStaticCaption({
     required String text,
     required CaptionStyleModel style,
@@ -106,17 +117,6 @@ class CaptionImageRenderer {
 
     final scaleFactor = videoHeight / 480.0;
 
-    // Build the exact same TextStyle as the preview
-    final shadows = _buildShadows(style, scaleFactor);
-    final textStyle = GoogleFonts.getFont(
-      style.fontFamily,
-      fontSize: style.fontSize * scaleFactor,
-      fontWeight: style.fontWeight,
-      color: style.textColor,
-      shadows: shadows,
-      height: style.lineSpacing,
-    );
-
     // Outer padding (same 16 logical pixels as VideoPreviewWidget)
     final outerPadding = 16.0 * scaleFactor;
     // Inner padding (same as _CaptionBox)
@@ -126,6 +126,12 @@ class CaptionImageRenderer {
     // Max text width: video width minus outer padding on both sides,
     // minus inner box padding on both sides
     final maxTextWidth = videoWidth - (2 * outerPadding) - (2 * hPadding);
+
+    // Build the exact same TextStyle as the preview
+    final textStyle = style.toTextStyle(
+      scale: scaleFactor,
+      gradientBounds: style.gradientBounds(maxTextWidth, scale: scaleFactor),
+    );
 
     // Layout text using TextPainter (same engine as Text widget)
     final textPainter = TextPainter(
@@ -153,16 +159,10 @@ class CaptionImageRenderer {
     );
 
     // Draw background box with border radius (same as _CaptionBox)
-    final bgColor = style.backgroundColor.withValues(
-      alpha: style.backgroundOpacity,
-    );
-    final bgRadius = style.backgroundBorderRadius * scaleFactor;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, imgWidth, imgHeight),
-        Radius.circular(bgRadius),
-      ),
-      Paint()..color = bgColor,
+    style.paintBackground(
+      canvas,
+      Rect.fromLTWH(0, 0, imgWidth, imgHeight),
+      scale: scaleFactor,
     );
 
     // Draw text at inner padding offset
@@ -170,9 +170,19 @@ class CaptionImageRenderer {
 
     // Convert to image
     final picture = recorder.endRecording();
-    final image = await picture.toImage(imgWidth.ceil(), imgHeight.ceil());
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    if (byteData == null) return null;
+    final pixelWidth = imgWidth.ceil();
+    final pixelHeight = imgHeight.ceil();
+    final image = await picture.toImage(pixelWidth, pixelHeight);
+    // Straight (non-premultiplied) alpha: FFmpeg's `rgba` pix_fmt expects it,
+    // and premultiplied bytes would darken every antialiased glyph edge and
+    // any soft shadow.
+    final byteData = await image.toByteData(
+      format: ui.ImageByteFormat.rawStraightRgba,
+    );
+    if (byteData == null) {
+      image.dispose();
+      return null;
+    }
 
     await File(outputPath).writeAsBytes(byteData.buffer.asUint8List());
     image.dispose();
@@ -189,6 +199,8 @@ class CaptionImageRenderer {
 
     return CaptionImageResult(
       imagePath: outputPath,
+      width: pixelWidth,
+      height: pixelHeight,
       x: x,
       y: y,
       startTime: startTime,
@@ -219,37 +231,55 @@ class CaptionImageRenderer {
     // State 0: all future (before first word)
     // State i: word i is active, words <i are past
     for (var activeIdx = -1; activeIdx < words.length; activeIdx++) {
-      // Build RichText spans with karaoke coloring
+      // Build spans with karaoke coloring. Mirrors KaraokeCaption._buildSpans:
+      // the inter-word space is its own span so that a box highlight hugs the
+      // word rather than bleeding across the gap after it.
       final spans = <TextSpan>[];
       for (var w = 0; w < words.length; w++) {
         final word = words[w];
         final rawWord = style.isAllCaps ? word.word.toUpperCase() : word.word;
-        final wordText = w < words.length - 1 ? '$rawWord ' : rawWord;
 
         final bool isActive = w == activeIdx;
         final bool isPast = activeIdx >= 0 && w < activeIdx;
 
         Color wordColor;
         if (isActive) {
-          wordColor = style.highlightColor;
+          wordColor = style.activeWordColor;
         } else if (isPast) {
           wordColor = style.textColor.withValues(alpha: 0.7);
         } else {
           wordColor = style.textColor;
         }
 
-        final shadows = _buildShadows(style, scaleFactor);
-        final wordStyle = GoogleFonts.getFont(
-          style.fontFamily,
-          fontSize: (isActive ? style.fontSize * 1.05 : style.fontSize) *
-              scaleFactor,
-          fontWeight: style.fontWeight,
-          color: wordColor,
-          shadows: shadows,
-          height: style.lineSpacing,
+        final gradientBounds = style.gradientBounds(
+          maxTextWidth,
+          scale: scaleFactor,
         );
 
-        spans.add(TextSpan(text: wordText, style: wordStyle));
+        spans.add(
+          TextSpan(
+            text: rawWord,
+            style: style.toTextStyle(
+              color: wordColor,
+              scale: scaleFactor,
+              isHighlighted: isActive,
+              gradientBounds: gradientBounds,
+            ),
+          ),
+        );
+
+        if (w < words.length - 1) {
+          spans.add(
+            TextSpan(
+              text: ' ',
+              style: style.toTextStyle(
+                color: style.textColor,
+                scale: scaleFactor,
+                gradientBounds: gradientBounds,
+              ),
+            ),
+          );
+        }
       }
 
       // Layout
@@ -273,23 +303,21 @@ class CaptionImageRenderer {
         Rect.fromLTWH(0, 0, imgWidth, imgHeight),
       );
 
-      final bgColor = style.backgroundColor.withValues(
-        alpha: style.backgroundOpacity,
-      );
-      final bgRadius = style.backgroundBorderRadius * scaleFactor;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(0, 0, imgWidth, imgHeight),
-          Radius.circular(bgRadius),
-        ),
-        Paint()..color = bgColor,
+      style.paintBackground(
+        canvas,
+        Rect.fromLTWH(0, 0, imgWidth, imgHeight),
+        scale: scaleFactor,
       );
 
       textPainter.paint(canvas, Offset(hPadding, vPadding));
 
       final picture = recorder.endRecording();
-      final image = await picture.toImage(imgWidth.ceil(), imgHeight.ceil());
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final pixelWidth = imgWidth.ceil();
+      final pixelHeight = imgHeight.ceil();
+      final image = await picture.toImage(pixelWidth, pixelHeight);
+      final byteData = await image.toByteData(
+        format: ui.ImageByteFormat.rawStraightRgba,
+      );
       if (byteData == null) {
         image.dispose();
         continue;
@@ -297,7 +325,7 @@ class CaptionImageRenderer {
 
       final imgPath = p.join(
         outputDir,
-        'cap_${captionIndex}_w$activeIdx.png',
+        'cap_${captionIndex}_w$activeIdx.rgba',
       );
       await File(imgPath).writeAsBytes(byteData.buffer.asUint8List());
       image.dispose();
@@ -341,6 +369,8 @@ class CaptionImageRenderer {
 
       results.add(CaptionImageResult(
         imagePath: imgPath,
+        width: pixelWidth,
+        height: pixelHeight,
         x: x,
         y: y,
         startTime: stateStart,
@@ -349,30 +379,6 @@ class CaptionImageRenderer {
     }
 
     return results;
-  }
-
-  /// Builds the same shadow list as AnimatedCaption._baseTextStyle.
-  static List<Shadow> _buildShadows(CaptionStyleModel style, double scale) {
-    final shadows = <Shadow>[];
-    if (style.shadowBlur > 0) {
-      shadows.add(Shadow(
-        color: style.shadowColor,
-        blurRadius: style.shadowBlur * scale,
-      ));
-    }
-    if (style.strokeWidth > 0) {
-      final sw = style.strokeWidth * scale;
-      for (var i = 0; i < 4; i++) {
-        final dx = i < 2 ? -sw : sw;
-        final dy = i.isEven ? -sw : sw;
-        shadows.add(Shadow(
-          color: style.strokeColor,
-          offset: Offset(dx, dy),
-          blurRadius: 0,
-        ));
-      }
-    }
-    return shadows;
   }
 
   /// Calculates the (x, y) position for the caption image on the video frame.

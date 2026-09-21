@@ -7,6 +7,7 @@ import '../../../data/repositories/project_repository.dart';
 import '../../providers/export_provider.dart';
 import '../../widgets/common/gradient_background.dart';
 import '../../widgets/export/export_complete_widget.dart';
+import '../../widgets/export/export_error_widget.dart';
 import '../../widgets/export/export_options_widget.dart';
 import '../../widgets/export/export_progress_widget.dart';
 
@@ -58,6 +59,9 @@ class _ExportScreenState extends State<ExportScreen> {
             builder: (context, exportProv, _) {
               if (exportProv.exportState == ExportState.done) {
                 return ExportCompleteWidget(exportProv: exportProv);
+              }
+              if (exportProv.exportState == ExportState.error) {
+                return ExportErrorWidget(exportProv: exportProv);
               }
               if (exportProv.isExporting) {
                 return ExportProgressWidget(exportProv: exportProv);

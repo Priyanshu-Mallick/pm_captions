@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/extensions/caption_style_extension.dart';
 import '../../../data/models/caption_model.dart';
 import '../../../data/models/caption_style_model.dart';
 
@@ -31,14 +31,8 @@ class KaraokeCaption extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: style.horizontalPadding,
-        vertical: style.horizontalPadding * 0.4,
-      ),
-      decoration: BoxDecoration(
-        color: style.backgroundColor.withValues(alpha: style.backgroundOpacity),
-        borderRadius: BorderRadius.circular(style.backgroundBorderRadius),
-      ),
+      padding: style.padding(),
+      decoration: style.toBoxDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           return FittedBox(
@@ -50,40 +44,7 @@ class KaraokeCaption extends StatelessWidget {
                 maxLines: style.maxLines,
                 overflow: TextOverflow.visible,
                 text: TextSpan(
-                  children:
-                      caption.words.map((word) {
-                        final wordStart = Duration(
-                          milliseconds: (word.start * 1000).round(),
-                        );
-                        final wordEnd = Duration(
-                          milliseconds: (word.end * 1000).round(),
-                        );
-
-                        // Determine word state based on current position
-                        final isActive =
-                            currentPosition >= wordStart &&
-                            currentPosition <= wordEnd;
-                        final isPast = currentPosition > wordEnd;
-
-                        Color wordColor;
-                        if (isActive) {
-                          wordColor = style.highlightColor;
-                        } else if (isPast) {
-                          wordColor = style.textColor.withValues(alpha: 0.7);
-                        } else {
-                          wordColor = style.textColor;
-                        }
-
-                        final rawWord =
-                            style.isAllCaps
-                                ? word.word.toUpperCase()
-                                : word.word;
-
-                        return TextSpan(
-                          text: '$rawWord ',
-                          style: _buildTextStyle(wordColor, isActive),
-                        );
-                      }).toList(),
+                  children: _buildSpans(constraints.maxWidth),
                 ),
               ),
             ),
@@ -95,14 +56,8 @@ class KaraokeCaption extends StatelessWidget {
 
   Widget _buildPlainText(String text) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: style.horizontalPadding,
-        vertical: style.horizontalPadding * 0.4,
-      ),
-      decoration: BoxDecoration(
-        color: style.backgroundColor.withValues(alpha: style.backgroundOpacity),
-        borderRadius: BorderRadius.circular(style.backgroundBorderRadius),
-      ),
+      padding: style.padding(),
+      decoration: style.toBoxDecoration(),
       child: LayoutBuilder(
         builder: (context, constraints) {
           return FittedBox(
@@ -112,7 +67,11 @@ class KaraokeCaption extends StatelessWidget {
               child: Text(
                 text,
                 textAlign: style.textAlign,
-                style: _buildTextStyle(style.textColor, false),
+                style: _buildTextStyle(
+                  style.textColor,
+                  false,
+                  constraints.maxWidth,
+                ),
                 maxLines: style.maxLines,
                 overflow: TextOverflow.visible,
               ),
@@ -123,35 +82,58 @@ class KaraokeCaption extends StatelessWidget {
     );
   }
 
-  TextStyle _buildTextStyle(Color color, bool isHighlighted) {
-    final shadows = <Shadow>[];
-    if (style.shadowBlur > 0) {
-      shadows.add(
-        Shadow(color: style.shadowColor, blurRadius: style.shadowBlur),
+  /// Builds one span per word, plus a separate unstyled span for each gap.
+  ///
+  /// The gap is split out so that in box-highlight mode the block hugs the
+  /// word instead of bleeding across the space after it.
+  List<TextSpan> _buildSpans(double width) {
+    final spans = <TextSpan>[];
+
+    for (var i = 0; i < caption.words.length; i++) {
+      final word = caption.words[i];
+      final wordStart = Duration(milliseconds: (word.start * 1000).round());
+      final wordEnd = Duration(milliseconds: (word.end * 1000).round());
+
+      final isActive =
+          currentPosition >= wordStart && currentPosition <= wordEnd;
+      final isPast = currentPosition > wordEnd;
+
+      final Color wordColor;
+      if (isActive) {
+        wordColor = style.activeWordColor;
+      } else if (isPast) {
+        wordColor = style.textColor.withValues(alpha: 0.7);
+      } else {
+        wordColor = style.textColor;
+      }
+
+      final rawWord = style.isAllCaps ? word.word.toUpperCase() : word.word;
+
+      spans.add(
+        TextSpan(
+          text: rawWord,
+          style: _buildTextStyle(wordColor, isActive, width),
+        ),
       );
-    }
-    if (style.strokeWidth > 0) {
-      // Simulate stroke with multiple shadows
-      for (var i = 0; i < 4; i++) {
-        final dx = i < 2 ? -style.strokeWidth : style.strokeWidth;
-        final dy = i.isEven ? -style.strokeWidth : style.strokeWidth;
-        shadows.add(
-          Shadow(
-            color: style.strokeColor,
-            offset: Offset(dx, dy),
-            blurRadius: 0,
+
+      if (i < caption.words.length - 1) {
+        spans.add(
+          TextSpan(
+            text: ' ',
+            style: _buildTextStyle(style.textColor, false, width),
           ),
         );
       }
     }
 
-    return GoogleFonts.getFont(
-      style.fontFamily,
-      fontSize: isHighlighted ? style.fontSize * 1.05 : style.fontSize,
-      fontWeight: style.fontWeight,
+    return spans;
+  }
+
+  TextStyle _buildTextStyle(Color color, bool isHighlighted, double width) {
+    return style.toTextStyle(
       color: color,
-      shadows: shadows.isNotEmpty ? shadows : null,
-      height: style.lineSpacing,
+      isHighlighted: isHighlighted,
+      gradientBounds: style.gradientBounds(width),
     );
   }
 }

@@ -8,6 +8,9 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../data/models/caption_style_model.dart';
 import '../../providers/style_provider.dart';
+import '../../providers/subscription_provider.dart';
+import '../common/pro_badge.dart';
+import '../paywall/paywall_bottom_sheet.dart';
 
 class StylePanelWidget extends StatelessWidget {
   const StylePanelWidget({super.key});
@@ -33,45 +36,16 @@ class StylePanelWidget extends StatelessWidget {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children:
-                    CaptionTemplate.values.map((t) {
-                      final sel = sp.currentStyle.predefinedTemplate == t;
-                      return GestureDetector(
-                        onTap: () => sp.applyTemplate(t),
-                        child: Container(
-                          width: 90,
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color:
-                                sel
-                                    ? AppColors.primary.withValues(alpha: 0.2)
-                                    : AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color:
-                                  sel ? AppColors.primary : AppColors.divider,
-                              width: sel ? 2 : 1,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              t.name,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    sel
-                                        ? AppColors.primary
-                                        : AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                    CaptionTemplate.values
+                        .map((t) => _templateCard(sp, t))
+                        .toList(),
               ),
             ),
+            // Pro styles apply immediately so the user sees them on their own
+            // video; the paywall only appears at export.
+            if (sp.currentStyle.predefinedTemplate.isPro &&
+                !context.watch<SubscriptionProvider>().isPro)
+              _proPreviewChip(context),
             const Divider(color: AppColors.divider, height: 32),
             _slider(
               'Font Size: ${sp.currentStyle.fontSize.round()}',
@@ -135,6 +109,88 @@ class StylePanelWidget extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _templateCard(StyleProvider sp, CaptionTemplate t) {
+    final sel = sp.currentStyle.predefinedTemplate == t;
+    return GestureDetector(
+      onTap: () => sp.applyTemplate(t),
+      child: Container(
+        width: 90,
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color:
+              sel ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: sel ? AppColors.primary : AppColors.divider,
+            width: sel ? 2 : 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Text(
+                t.displayName,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: sel ? AppColors.primary : AppColors.textSecondary,
+                ),
+              ),
+            ),
+            if (t.isPro)
+              const Positioned(top: 0, right: 0, child: ProBadge(compact: true)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _proPreviewChip(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: GestureDetector(
+        onTap: () => PaywallBottomSheet.show(context),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.workspace_premium_rounded,
+                size: 16,
+                color: Color(0xFFD4AF37),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Previewing a Pro style — upgrade to export',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: Color(0xFFD4AF37),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

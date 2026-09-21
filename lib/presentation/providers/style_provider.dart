@@ -54,7 +54,13 @@ class StyleProvider extends ChangeNotifier {
   }
 
   void updateTextColor(Color color) {
-    _currentStyle = _currentStyle.copyWith(textColor: color);
+    // Clearing the gradient is what makes the picker feel responsive: on a
+    // gradient style (e.g. Cyberpunk) the shader paints over textColor, so
+    // without this the user drags the picker and nothing changes.
+    _currentStyle = _currentStyle.copyWith(
+      textColor: color,
+      clearGradient: true,
+    );
     notifyListeners();
   }
 

@@ -7,11 +7,14 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../data/models/caption_style_model.dart';
 import '../../../data/models/export_settings_model.dart';
 import '../../../data/models/project_model.dart';
 import '../../providers/caption_provider.dart';
 import '../../providers/export_provider.dart';
 import '../../providers/style_provider.dart';
+import '../../providers/subscription_provider.dart';
+import '../paywall/paywall_bottom_sheet.dart';
 
 class ExportOptionsWidget extends StatefulWidget {
   final ProjectModel project;
@@ -198,11 +201,25 @@ class _ExportOptionsWidgetState extends State<ExportOptionsWidget> {
     );
   }
 
-  void _startExport({required bool includeVideo, bool includeSrt = false}) {
-    final captions = context.read<CaptionProvider>().captions;
+  /// Single chokepoint for every video export, so the Pro gate lives here and
+  /// nowhere else. SRT/VTT-only exports deliberately bypass it: subtitle files
+  /// carry no styling, so there is nothing Pro about them.
+  Future<void> _startExport({
+    required bool includeVideo,
+    bool includeSrt = false,
+  }) async {
     final style = context.read<StyleProvider>().currentStyle;
+
+    if (style.predefinedTemplate.isPro &&
+        !context.read<SubscriptionProvider>().isPro) {
+      final unlocked = await PaywallBottomSheet.show(context);
+      if (!unlocked || !mounted) return;
+    }
+
+    final captions = context.read<CaptionProvider>().captions;
     final settings = _settings.copyWith(exportSRT: includeSrt);
 
+    if (!mounted) return;
     context.read<ExportProvider>().exportVideo(
       videoPath: widget.project.videoPath,
       captions: captions,

@@ -6,8 +6,28 @@ import 'package:equatable/equatable.dart';
 /// Animation styles available for caption display.
 enum CaptionAnimationStyle { none, fadeIn, slideUp, typewriter, karaoke }
 
+/// How the currently-spoken word is emphasised during karaoke playback.
+///
+/// This is the mechanic that separates caption styles in practice: recolouring
+/// the word is the baseline every editor can do, while a block behind the word
+/// is the look that dominates short-form feeds.
+///
+/// Persisted by index — append only.
+enum CaptionWordHighlight {
+  /// Recolour the active word with `highlightColor`.
+  color,
+
+  /// Paint a solid `highlightColor` block behind the active word.
+  box,
+}
+
 /// Pre-defined caption templates.
+///
+/// IMPORTANT: values are persisted by [Enum.index] (see [CaptionStyleModel.toJson]),
+/// so new templates must be APPENDED only. Inserting or reordering silently
+/// remaps the template of every already-saved project.
 enum CaptionTemplate {
+  // Free
   defaultTemplate,
   tiktok,
   youtube,
@@ -16,6 +36,67 @@ enum CaptionTemplate {
   bold,
   neon,
   typewriter,
+  // Pro — append only.
+  karaokeBox,
+  hormozi,
+  cyberpunk,
+  wordPop,
+  comicImpact,
+  frostedGlass,
+}
+
+/// Display metadata and Pro gating for [CaptionTemplate].
+extension CaptionTemplateInfo on CaptionTemplate {
+  /// Whether this template requires an active Pro subscription to export.
+  ///
+  /// Relies on Pro templates being appended after the free ones.
+  bool get isPro => index >= CaptionTemplate.karaokeBox.index;
+
+  /// UI-friendly title.
+  String get displayName => switch (this) {
+    CaptionTemplate.defaultTemplate => 'Default',
+    CaptionTemplate.tiktok => 'TikTok',
+    CaptionTemplate.youtube => 'YouTube',
+    CaptionTemplate.instagram => 'Instagram',
+    CaptionTemplate.minimal => 'Minimal',
+    CaptionTemplate.bold => 'Bold',
+    CaptionTemplate.neon => 'Neon',
+    CaptionTemplate.typewriter => 'Typewriter',
+    CaptionTemplate.karaokeBox => 'Karaoke Box',
+    CaptionTemplate.hormozi => 'Hormozi',
+    CaptionTemplate.cyberpunk => 'Cyberpunk',
+    CaptionTemplate.wordPop => 'Word Pop',
+    CaptionTemplate.comicImpact => 'Comic',
+    CaptionTemplate.frostedGlass => 'Frosted',
+  };
+
+  /// Short subtitle shown under the template name.
+  String get description => switch (this) {
+    CaptionTemplate.defaultTemplate => 'Clean and neutral',
+    CaptionTemplate.tiktok => 'Punchy short-form',
+    CaptionTemplate.youtube => 'Classic readable',
+    CaptionTemplate.instagram => 'Soft and modern',
+    CaptionTemplate.minimal => 'Understated text',
+    CaptionTemplate.bold => 'Heavy condensed',
+    CaptionTemplate.neon => 'Glowing accent',
+    CaptionTemplate.typewriter => 'Monospace retro',
+    CaptionTemplate.karaokeBox => 'Block behind each spoken word',
+    CaptionTemplate.hormozi => 'Business hook retention',
+    CaptionTemplate.cyberpunk => 'Neon tech and gaming',
+    CaptionTemplate.wordPop => 'Spoken word scales up big',
+    CaptionTemplate.comicImpact => 'Pop-art comic punch',
+    CaptionTemplate.frostedGlass => 'Sleek frosted modern',
+  };
+}
+
+/// Safely reads an index-based enum value from persisted JSON.
+///
+/// Guards against a saved index that no longer exists (e.g. the user downgrades
+/// after saving a project that used a newer template).
+T _enumFromIndex<T>(List<T> values, Object? raw, T fallback) {
+  final index = raw is int ? raw : null;
+  if (index == null || index < 0 || index >= values.length) return fallback;
+  return values[index];
 }
 
 /// Model representing caption styling options.
@@ -45,6 +126,36 @@ class CaptionStyleModel extends Equatable {
   final int maxLines;
   final CaptionTemplate predefinedTemplate;
 
+  /// Extra tracking between glyphs, in logical pixels.
+  final double letterSpacing;
+
+  /// Drop-shadow displacement. Zero keeps the shadow centred behind the text.
+  final double shadowOffsetX;
+  final double shadowOffsetY;
+
+  /// Two or more colors paint the text with a horizontal gradient instead of
+  /// the solid [textColor]. Null (or fewer than 2 colors) means solid.
+  final List<Color>? gradientColors;
+
+  /// Outline drawn around the background pill. Null or zero width means none.
+  final Color? borderColor;
+  final double borderWidth;
+
+  /// How the active karaoke word is emphasised.
+  final CaptionWordHighlight wordHighlightMode;
+
+  /// Font-size multiplier applied to the active karaoke word.
+  ///
+  /// 1.0 disables the pop; values around 1.3 give the punchy "scale" look.
+  final double activeWordScale;
+
+  /// Text colour for the active word.
+  ///
+  /// Mainly needed in [CaptionWordHighlight.box] mode, where the accent colour
+  /// becomes the block and the glyphs need to contrast against it (e.g. black
+  /// text on a yellow block). Null falls back to a sensible per-mode default.
+  final Color? highlightTextColor;
+
   const CaptionStyleModel({
     this.fontFamily = 'Montserrat',
     this.fontSize = 22.0,
@@ -67,14 +178,34 @@ class CaptionStyleModel extends Equatable {
     this.isAllCaps = false,
     this.maxLines = 2,
     this.predefinedTemplate = CaptionTemplate.defaultTemplate,
+    this.letterSpacing = 0.0,
+    this.shadowOffsetX = 0.0,
+    this.shadowOffsetY = 0.0,
+    this.gradientColors,
+    this.borderColor,
+    this.borderWidth = 0.0,
+    this.wordHighlightMode = CaptionWordHighlight.color,
+    this.activeWordScale = 1.05,
+    this.highlightTextColor,
   });
+
+  /// Whether the text should be painted with a gradient shader.
+  bool get hasGradient =>
+      gradientColors != null && gradientColors!.length >= 2;
+
+  /// Whether the background pill should be outlined.
+  bool get hasBorder => borderColor != null && borderWidth > 0;
 
   /// Creates a [CaptionStyleModel] from a JSON map.
   factory CaptionStyleModel.fromJson(Map<String, dynamic> json) {
     return CaptionStyleModel(
       fontFamily: json['fontFamily'] as String? ?? 'Montserrat',
       fontSize: (json['fontSize'] as num?)?.toDouble() ?? 22.0,
-      fontWeight: FontWeight.values[json['fontWeight'] as int? ?? 7],
+      fontWeight: _enumFromIndex(
+        FontWeight.values,
+        json['fontWeight'],
+        FontWeight.w700,
+      ),
       textColor: Color(json['textColor'] as int? ?? 0xFFFFFFFF),
       highlightColor: Color(json['highlightColor'] as int? ?? 0xFFFFD700),
       backgroundColor: Color(json['backgroundColor'] as int? ?? 0x99000000),
@@ -85,21 +216,51 @@ class CaptionStyleModel extends Equatable {
       shadowBlur: (json['shadowBlur'] as num?)?.toDouble() ?? 4.0,
       strokeColor: Color(json['strokeColor'] as int? ?? 0xFF000000),
       strokeWidth: (json['strokeWidth'] as num?)?.toDouble() ?? 1.5,
-      textAlign:
-          TextAlign.values[json['textAlign'] as int? ?? TextAlign.center.index],
+      textAlign: _enumFromIndex(
+        TextAlign.values,
+        json['textAlign'],
+        TextAlign.center,
+      ),
       verticalPosition: (json['verticalPosition'] as num?)?.toDouble() ?? 0.85,
       horizontalPadding:
           (json['horizontalPadding'] as num?)?.toDouble() ?? 16.0,
       lineSpacing: (json['lineSpacing'] as num?)?.toDouble() ?? 1.2,
       maxWordsPerLine: json['maxWordsPerLine'] as int? ?? 5,
-      animationStyle:
-          CaptionAnimationStyle.values[json['animationStyle'] as int? ??
-              CaptionAnimationStyle.karaoke.index],
+      animationStyle: _enumFromIndex(
+        CaptionAnimationStyle.values,
+        json['animationStyle'],
+        CaptionAnimationStyle.karaoke,
+      ),
       isAllCaps: json['isAllCaps'] as bool? ?? false,
       maxLines: json['maxLines'] as int? ?? 2,
-      predefinedTemplate:
-          CaptionTemplate.values[json['predefinedTemplate'] as int? ??
-              CaptionTemplate.defaultTemplate.index],
+      predefinedTemplate: _enumFromIndex(
+        CaptionTemplate.values,
+        json['predefinedTemplate'],
+        CaptionTemplate.defaultTemplate,
+      ),
+      letterSpacing: (json['letterSpacing'] as num?)?.toDouble() ?? 0.0,
+      shadowOffsetX: (json['shadowOffsetX'] as num?)?.toDouble() ?? 0.0,
+      shadowOffsetY: (json['shadowOffsetY'] as num?)?.toDouble() ?? 0.0,
+      gradientColors:
+          (json['gradientColors'] as List?)
+              ?.whereType<int>()
+              .map(Color.new)
+              .toList(),
+      borderColor:
+          json['borderColor'] == null
+              ? null
+              : Color(json['borderColor'] as int),
+      borderWidth: (json['borderWidth'] as num?)?.toDouble() ?? 0.0,
+      wordHighlightMode: _enumFromIndex(
+        CaptionWordHighlight.values,
+        json['wordHighlightMode'],
+        CaptionWordHighlight.color,
+      ),
+      activeWordScale: (json['activeWordScale'] as num?)?.toDouble() ?? 1.05,
+      highlightTextColor:
+          json['highlightTextColor'] == null
+              ? null
+              : Color(json['highlightTextColor'] as int),
     );
   }
 
@@ -109,14 +270,14 @@ class CaptionStyleModel extends Equatable {
       'fontFamily': fontFamily,
       'fontSize': fontSize,
       'fontWeight': fontWeight.index,
-      'textColor': textColor.value,
-      'highlightColor': highlightColor.value,
-      'backgroundColor': backgroundColor.value,
+      'textColor': textColor.toARGB32(),
+      'highlightColor': highlightColor.toARGB32(),
+      'backgroundColor': backgroundColor.toARGB32(),
       'backgroundOpacity': backgroundOpacity,
       'backgroundBorderRadius': backgroundBorderRadius,
-      'shadowColor': shadowColor.value,
+      'shadowColor': shadowColor.toARGB32(),
       'shadowBlur': shadowBlur,
-      'strokeColor': strokeColor.value,
+      'strokeColor': strokeColor.toARGB32(),
       'strokeWidth': strokeWidth,
       'textAlign': textAlign.index,
       'verticalPosition': verticalPosition,
@@ -127,6 +288,16 @@ class CaptionStyleModel extends Equatable {
       'isAllCaps': isAllCaps,
       'maxLines': maxLines,
       'predefinedTemplate': predefinedTemplate.index,
+      'letterSpacing': letterSpacing,
+      'shadowOffsetX': shadowOffsetX,
+      'shadowOffsetY': shadowOffsetY,
+      'gradientColors':
+          gradientColors?.map((c) => c.toARGB32()).toList(),
+      'borderColor': borderColor?.toARGB32(),
+      'borderWidth': borderWidth,
+      'wordHighlightMode': wordHighlightMode.index,
+      'activeWordScale': activeWordScale,
+      'highlightTextColor': highlightTextColor?.toARGB32(),
     };
   }
 
@@ -163,6 +334,18 @@ class CaptionStyleModel extends Equatable {
     bool? isAllCaps,
     int? maxLines,
     CaptionTemplate? predefinedTemplate,
+    double? letterSpacing,
+    double? shadowOffsetX,
+    double? shadowOffsetY,
+    List<Color>? gradientColors,
+    Color? borderColor,
+    double? borderWidth,
+    CaptionWordHighlight? wordHighlightMode,
+    double? activeWordScale,
+    Color? highlightTextColor,
+    // Nullable fields can't be cleared via `??`, so they get explicit flags.
+    bool clearGradient = false,
+    bool clearBorder = false,
   }) {
     return CaptionStyleModel(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -187,6 +370,16 @@ class CaptionStyleModel extends Equatable {
       isAllCaps: isAllCaps ?? this.isAllCaps,
       maxLines: maxLines ?? this.maxLines,
       predefinedTemplate: predefinedTemplate ?? this.predefinedTemplate,
+      letterSpacing: letterSpacing ?? this.letterSpacing,
+      shadowOffsetX: shadowOffsetX ?? this.shadowOffsetX,
+      shadowOffsetY: shadowOffsetY ?? this.shadowOffsetY,
+      gradientColors:
+          clearGradient ? null : (gradientColors ?? this.gradientColors),
+      borderColor: clearBorder ? null : (borderColor ?? this.borderColor),
+      borderWidth: clearBorder ? 0.0 : (borderWidth ?? this.borderWidth),
+      wordHighlightMode: wordHighlightMode ?? this.wordHighlightMode,
+      activeWordScale: activeWordScale ?? this.activeWordScale,
+      highlightTextColor: highlightTextColor ?? this.highlightTextColor,
     );
   }
 
@@ -213,5 +406,14 @@ class CaptionStyleModel extends Equatable {
     isAllCaps,
     maxLines,
     predefinedTemplate,
+    letterSpacing,
+    shadowOffsetX,
+    shadowOffsetY,
+    gradientColors,
+    borderColor,
+    borderWidth,
+    wordHighlightMode,
+    activeWordScale,
+    highlightTextColor,
   ];
 }

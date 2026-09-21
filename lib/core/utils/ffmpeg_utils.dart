@@ -213,9 +213,20 @@ class FFmpegUtils {
     // with an enable condition for its time window.
     final args = <String>['-y', '-i', videoPath];
 
-    // Add each caption image as an input
+    // Add each caption image as an input.
+    //
+    // These are headerless raw RGBA, not PNG: the bundled ffmpeg-kit min-gpl
+    // build has no PNG decoder ("Decoder (codec png) not found"), which broke
+    // every video export. rawvideo needs no decoder, but it also cannot infer
+    // the frame geometry from the file, so format/size must be declared as
+    // input options ahead of each -i.
     for (final img in captionImages) {
-      args.addAll(['-i', img.imagePath]);
+      args.addAll([
+        '-f', 'rawvideo',
+        '-pixel_format', 'rgba',
+        '-video_size', '${img.width}x${img.height}',
+        '-i', img.imagePath,
+      ]);
     }
 
     // Build filter_complex with chained overlays

@@ -1,8 +1,8 @@
 PODS:
-  - ffmpeg_kit_flutter_new (1.0.0):
-    - ffmpeg_kit_flutter_new/full-gpl-lts (= 1.0.0)
+  - ffmpeg_kit_flutter_new_min_gpl (7.1.1):
+    - ffmpeg_kit_flutter_new_min_gpl/min-gpl (= 7.1.1)
     - Flutter
-  - ffmpeg_kit_flutter_new/full-gpl-lts (1.0.0):
+  - ffmpeg_kit_flutter_new_min_gpl/min-gpl (7.1.1):
     - Flutter
   - Flutter (1.0.0)
   - gallery_saver_plus (0.0.1):
@@ -23,25 +23,34 @@ PODS:
     - Flutter
   - permission_handler_apple (9.3.0):
     - Flutter
+  - purchases_flutter (8.11.0):
+    - Flutter
+    - PurchasesHybridCommon (= 14.3.0)
+  - PurchasesHybridCommon (14.3.0):
+    - RevenueCat (= 5.32.0)
+  - RevenueCat (5.32.0)
   - video_thumbnail (0.0.1):
     - Flutter
     - libwebp
 
 DEPENDENCIES:
-  - ffmpeg_kit_flutter_new (from `.symlinks/plugins/ffmpeg_kit_flutter_new/ios`)
+  - ffmpeg_kit_flutter_new_min_gpl (from `.symlinks/plugins/ffmpeg_kit_flutter_new_min_gpl/ios`)
   - Flutter (from `Flutter`)
   - gallery_saver_plus (from `.symlinks/plugins/gallery_saver_plus/ios`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+  - purchases_flutter (from `.symlinks/plugins/purchases_flutter/ios`)
   - video_thumbnail (from `.symlinks/plugins/video_thumbnail/ios`)
 
 SPEC REPOS:
   trunk:
     - libwebp
+    - PurchasesHybridCommon
+    - RevenueCat
 
 EXTERNAL SOURCES:
-  ffmpeg_kit_flutter_new:
-    :path: ".symlinks/plugins/ffmpeg_kit_flutter_new/ios"
+  ffmpeg_kit_flutter_new_min_gpl:
+    :path: ".symlinks/plugins/ffmpeg_kit_flutter_new_min_gpl/ios"
   Flutter:
     :path: Flutter
   gallery_saver_plus:
@@ -50,16 +59,21 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/open_file_ios/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
+  purchases_flutter:
+    :path: ".symlinks/plugins/purchases_flutter/ios"
   video_thumbnail:
     :path: ".symlinks/plugins/video_thumbnail/ios"
 
 SPEC CHECKSUMS:
-  ffmpeg_kit_flutter_new: fd5914d838ca5791b32805e3b0c545a99ab96c15
+  ffmpeg_kit_flutter_new_min_gpl: a11c284f789382d6b093ffaee8c0fe647566058b
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   gallery_saver_plus: 61c8a831d5975e2bf57f87bcd64379dcc7d29ff2
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+  purchases_flutter: 3570127ba41583a75e553d68a763367007830eff
+  PurchasesHybridCommon: 7f0944cc5411bdcd1ea5d69affa6a6f9aaf87b13
+  RevenueCat: 7e1d0768fb287c9983173c9b28e39ccbeeb828a9
   video_thumbnail: b637e0ad5f588ca9945f6e2c927f73a69a661140
 
 PODFILE CHECKSUM: 6fa773d29b418a5233ebcfa6b6c6098065c1d0d5

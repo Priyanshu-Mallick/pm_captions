@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/extensions/caption_style_extension.dart';
 import '../../../data/models/caption_model.dart';
 import '../../../data/models/caption_style_model.dart';
 import 'karaoke_caption.dart';
@@ -99,7 +99,9 @@ class AnimatedCaption extends StatelessWidget {
               child: Text(
                 text,
                 textAlign: style.textAlign,
-                style: _baseTextStyle,
+                style: style.toTextStyle(
+                  gradientBounds: style.gradientBounds(constraints.maxWidth),
+                ),
                 maxLines: style.maxLines,
                 overflow: TextOverflow.visible,
               ),
@@ -115,36 +117,6 @@ class AnimatedCaption extends StatelessWidget {
     return style.isAllCaps ? caption!.text.toUpperCase() : caption!.text;
   }
 
-  TextStyle get _baseTextStyle {
-    final shadows = <Shadow>[];
-    if (style.shadowBlur > 0) {
-      shadows.add(
-        Shadow(color: style.shadowColor, blurRadius: style.shadowBlur),
-      );
-    }
-    if (style.strokeWidth > 0) {
-      for (var i = 0; i < 4; i++) {
-        final dx = i < 2 ? -style.strokeWidth : style.strokeWidth;
-        final dy = i.isEven ? -style.strokeWidth : style.strokeWidth;
-        shadows.add(
-          Shadow(
-            color: style.strokeColor,
-            offset: Offset(dx, dy),
-            blurRadius: 0,
-          ),
-        );
-      }
-    }
-
-    return GoogleFonts.getFont(
-      style.fontFamily,
-      fontSize: style.fontSize,
-      fontWeight: style.fontWeight,
-      color: style.textColor,
-      shadows: shadows.isNotEmpty ? shadows : null,
-      height: style.lineSpacing,
-    );
-  }
 }
 
 /// Container box for caption text with background styling.
@@ -157,14 +129,8 @@ class _CaptionBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: style.horizontalPadding,
-        vertical: style.horizontalPadding * 0.4,
-      ),
-      decoration: BoxDecoration(
-        color: style.backgroundColor.withValues(alpha: style.backgroundOpacity),
-        borderRadius: BorderRadius.circular(style.backgroundBorderRadius),
-      ),
+      padding: style.padding(),
+      decoration: style.toBoxDecoration(),
       child: child,
     );
   }

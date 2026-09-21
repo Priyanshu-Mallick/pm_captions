@@ -65,6 +65,9 @@ dependencies:
   in_app_update: ^4.2.5
   in_app_review: ^2.0.12
 
+  # Subscriptions
+  purchases_flutter: ^8.5.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
