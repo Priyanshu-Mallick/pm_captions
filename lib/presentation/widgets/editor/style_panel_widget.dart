@@ -6,12 +6,8 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/services/revenue_cat_service.dart';
 import '../../../data/models/caption_style_model.dart';
 import '../../providers/style_provider.dart';
-import '../../providers/subscription_provider.dart';
-import '../common/pro_badge.dart';
-import '../paywall/paywall_bottom_sheet.dart';
 
 class StylePanelWidget extends StatelessWidget {
   const StylePanelWidget({super.key});
@@ -36,25 +32,16 @@ class StylePanelWidget extends StatelessWidget {
               height: 80,
               child: ListView(
                 scrollDirection: Axis.horizontal,
+                // Pro styles aren't part of this build — no subscription
+                // dependency at all — so the picker only ever offers the
+                // free templates.
                 children:
-                    // Pro templates are entirely invisible while the feature
-                    // is flagged off — not just export-gated. Nothing else
-                    // downstream (badges, paywall chip) can trigger if a Pro
-                    // template can never be selected in the first place.
                     CaptionTemplate.values
-                        .where(
-                          (t) => !t.isPro || RevenueCatService.featureEnabled,
-                        )
+                        .where((t) => !t.isPro)
                         .map((t) => _templateCard(sp, t))
                         .toList(),
               ),
             ),
-            // Pro styles apply immediately so the user sees them on their own
-            // video; the paywall only appears at export.
-            if (RevenueCatService.featureEnabled &&
-                sp.currentStyle.predefinedTemplate.isPro &&
-                !context.watch<SubscriptionProvider>().isPro)
-              _proPreviewChip(context),
             const Divider(color: AppColors.divider, height: 32),
             _slider(
               'Font Size: ${sp.currentStyle.fontSize.round()}',
@@ -138,65 +125,15 @@ class StylePanelWidget extends StatelessWidget {
             width: sel ? 2 : 1,
           ),
         ),
-        child: Stack(
-          children: [
-            Center(
-              child: Text(
-                t.displayName,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: sel ? AppColors.primary : AppColors.textSecondary,
-                ),
-              ),
+        child: Center(
+          child: Text(
+            t.displayName,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: sel ? AppColors.primary : AppColors.textSecondary,
             ),
-            if (t.isPro)
-              const Positioned(top: 0, right: 0, child: ProBadge(compact: true)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _proPreviewChip(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: GestureDetector(
-        onTap: () => PaywallBottomSheet.show(context),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFD4AF37).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: const Color(0xFFD4AF37).withValues(alpha: 0.5),
-            ),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.workspace_premium_rounded,
-                size: 16,
-                color: Color(0xFFD4AF37),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Previewing a Pro style — upgrade to export',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: Color(0xFFD4AF37),
-              ),
-            ],
           ),
         ),
       ),

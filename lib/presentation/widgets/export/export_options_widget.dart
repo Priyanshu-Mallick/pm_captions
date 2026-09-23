@@ -7,15 +7,11 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
-import '../../../core/services/revenue_cat_service.dart';
-import '../../../data/models/caption_style_model.dart';
 import '../../../data/models/export_settings_model.dart';
 import '../../../data/models/project_model.dart';
 import '../../providers/caption_provider.dart';
 import '../../providers/export_provider.dart';
 import '../../providers/style_provider.dart';
-import '../../providers/subscription_provider.dart';
-import '../paywall/paywall_bottom_sheet.dart';
 
 class ExportOptionsWidget extends StatefulWidget {
   final ProjectModel project;
@@ -202,32 +198,11 @@ class _ExportOptionsWidgetState extends State<ExportOptionsWidget> {
     );
   }
 
-  /// Single chokepoint for every video export, so the Pro gate lives here and
-  /// nowhere else. SRT/VTT-only exports deliberately bypass it: subtitle files
-  /// carry no styling, so there is nothing Pro about them.
-  Future<void> _startExport({
-    required bool includeVideo,
-    bool includeSrt = false,
-  }) async {
+  void _startExport({required bool includeVideo, bool includeSrt = false}) {
     final style = context.read<StyleProvider>().currentStyle;
-
-    // The style panel only lets you *pick* a Pro template while the feature
-    // flag is on, but a project saved earlier (e.g. while testing Pro before
-    // the flag existed) can still have one persisted in its style JSON.
-    // Checking the flag here — not just relying on the picker — is what
-    // makes a disabled build behave as if the feature never existed,
-    // regardless of what's sitting in older projects.
-    if (RevenueCatService.featureEnabled &&
-        style.predefinedTemplate.isPro &&
-        !context.read<SubscriptionProvider>().isPro) {
-      final unlocked = await PaywallBottomSheet.show(context);
-      if (!unlocked || !mounted) return;
-    }
-
     final captions = context.read<CaptionProvider>().captions;
     final settings = _settings.copyWith(exportSRT: includeSrt);
 
-    if (!mounted) return;
     context.read<ExportProvider>().exportVideo(
       videoPath: widget.project.videoPath,
       captions: captions,

@@ -8,13 +8,11 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'core/constants/app_theme.dart';
 import 'core/constants/app_strings.dart';
-import 'core/services/revenue_cat_service.dart';
 import 'presentation/providers/video_provider.dart';
 import 'presentation/providers/processing_provider.dart';
 import 'presentation/providers/caption_provider.dart';
 import 'presentation/providers/style_provider.dart';
 import 'presentation/providers/export_provider.dart';
-import 'presentation/providers/subscription_provider.dart';
 import 'presentation/router/app_router.dart';
 
 Future<void> main() async {
@@ -47,9 +45,6 @@ Future<void> main() async {
   } catch (_) {
     // No .env bundled — crash reporting stays disabled.
   }
-
-  // Configure subscriptions. No-ops safely when keys are absent.
-  await RevenueCatService.initialize();
 
   final sentryDsn = dotenv.maybeGet('SENTRY_DSN') ?? '';
 
@@ -93,9 +88,6 @@ class AICaptionsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CaptionProvider()),
         ChangeNotifierProvider(create: (_) => StyleProvider()),
         ChangeNotifierProvider(create: (_) => ExportProvider()),
-        ChangeNotifierProvider(
-          create: (_) => SubscriptionProvider()..initialize(),
-        ),
       ],
       child: MaterialApp.router(
         title: AppStrings.appName,
