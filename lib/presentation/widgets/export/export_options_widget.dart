@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/revenue_cat_service.dart';
 import '../../../data/models/caption_style_model.dart';
 import '../../../data/models/export_settings_model.dart';
 import '../../../data/models/project_model.dart';
@@ -210,7 +211,14 @@ class _ExportOptionsWidgetState extends State<ExportOptionsWidget> {
   }) async {
     final style = context.read<StyleProvider>().currentStyle;
 
-    if (style.predefinedTemplate.isPro &&
+    // The style panel only lets you *pick* a Pro template while the feature
+    // flag is on, but a project saved earlier (e.g. while testing Pro before
+    // the flag existed) can still have one persisted in its style JSON.
+    // Checking the flag here — not just relying on the picker — is what
+    // makes a disabled build behave as if the feature never existed,
+    // regardless of what's sitting in older projects.
+    if (RevenueCatService.featureEnabled &&
+        style.predefinedTemplate.isPro &&
         !context.read<SubscriptionProvider>().isPro) {
       final unlocked = await PaywallBottomSheet.show(context);
       if (!unlocked || !mounted) return;

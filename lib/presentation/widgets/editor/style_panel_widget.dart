@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/revenue_cat_service.dart';
 import '../../../data/models/caption_style_model.dart';
 import '../../providers/style_provider.dart';
 import '../../providers/subscription_provider.dart';
@@ -36,14 +37,22 @@ class StylePanelWidget extends StatelessWidget {
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 children:
+                    // Pro templates are entirely invisible while the feature
+                    // is flagged off — not just export-gated. Nothing else
+                    // downstream (badges, paywall chip) can trigger if a Pro
+                    // template can never be selected in the first place.
                     CaptionTemplate.values
+                        .where(
+                          (t) => !t.isPro || RevenueCatService.featureEnabled,
+                        )
                         .map((t) => _templateCard(sp, t))
                         .toList(),
               ),
             ),
             // Pro styles apply immediately so the user sees them on their own
             // video; the paywall only appears at export.
-            if (sp.currentStyle.predefinedTemplate.isPro &&
+            if (RevenueCatService.featureEnabled &&
+                sp.currentStyle.predefinedTemplate.isPro &&
                 !context.watch<SubscriptionProvider>().isPro)
               _proPreviewChip(context),
             const Divider(color: AppColors.divider, height: 32),

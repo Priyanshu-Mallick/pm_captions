@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/services/revenue_cat_service.dart';
 import '../../widgets/common/gradient_background.dart';
 import '../../widgets/settings/about_widget.dart';
 import '../../widgets/settings/api_key_config_widget.dart';
@@ -32,8 +33,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 _buildHeader(),
                 const SizedBox(height: 24),
-                const ProMembershipWidget(),
-                const SizedBox(height: 24),
+                if (RevenueCatService.featureEnabled) ...[
+                  const ProMembershipWidget(),
+                  const SizedBox(height: 24),
+                ],
                 const ApiKeyConfigWidget(),
                 const SizedBox(height: 24),
                 const LanguageConfigWidget(),

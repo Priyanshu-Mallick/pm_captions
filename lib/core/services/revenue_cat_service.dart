@@ -19,6 +19,16 @@ class RevenueCatService {
   static bool _available = false;
   static String _entitlementId = 'pro_access';
 
+  /// Master switch for the whole Pro feature (styles, paywall, badges,
+  /// settings card, RevenueCat itself) — read once from `.env`.
+  ///
+  /// This is a release-readiness flag, not a per-user entitlement kill
+  /// switch: it hides Pro from everyone on this build, independent of
+  /// whether a real subscription exists. Flip `PRO_FEATURE_ENABLED=true` in
+  /// `.env` when the Pro tier is ready to ship.
+  static final bool featureEnabled =
+      dotenv.maybeGet('PRO_FEATURE_ENABLED')?.trim().toLowerCase() == 'true';
+
   /// Whether the SDK configured successfully and store calls can be made.
   static bool get isAvailable => _available;
 
@@ -26,7 +36,12 @@ class RevenueCatService {
   static String get entitlementId => _entitlementId;
 
   /// Configures the SDK with the platform's public key. Never throws.
+  ///
+  /// No-ops entirely when [featureEnabled] is false, so a build with the
+  /// feature flag off never touches the native billing SDK at all.
   static Future<void> initialize() async {
+    if (!featureEnabled) return;
+
     _entitlementId =
         dotenv.maybeGet('REVENUECAT_ENTITLEMENT_ID')?.trim().isNotEmpty == true
             ? dotenv.get('REVENUECAT_ENTITLEMENT_ID').trim()

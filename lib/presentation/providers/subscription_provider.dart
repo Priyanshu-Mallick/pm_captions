@@ -55,8 +55,23 @@ class SubscriptionProvider extends ChangeNotifier {
     return sorted;
   }
 
+  /// Whether the Pro feature is enabled on this build at all — see
+  /// [RevenueCatService.featureEnabled]. UI that gates on Pro should check
+  /// this directly rather than inferring it from [isPro], since a disabled
+  /// build must hide Pro even for a debug-toggled or previously-entitled user.
+  bool get isFeatureEnabled => RevenueCatService.featureEnabled;
+
   /// Loads entitlement state and offerings. Never throws.
+  ///
+  /// No-ops when the Pro feature is disabled for this build, so [isPro] stays
+  /// permanently false and nothing here touches RevenueCat.
   Future<void> initialize() async {
+    if (!RevenueCatService.featureEnabled) {
+      _isInitialized = true;
+      notifyListeners();
+      return;
+    }
+
     if (kDebugMode) {
       final prefs = await SharedPreferences.getInstance();
       _debugPro = prefs.getBool(_debugProKey) ?? false;
