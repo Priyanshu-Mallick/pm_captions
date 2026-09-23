@@ -1,7 +1,7 @@
 name: pm_captions
 description: AI Caption Generator for voiceover videos - Add captions to your videos instantly.
 publish_to: "none"
-version: 1.2.4+11
+version: 1.2.5+12
 
 environment:
   sdk: ^3.7.0
