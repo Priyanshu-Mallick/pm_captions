@@ -102,8 +102,11 @@ class RevenueCatService {
   static Future<bool> purchasePackage(Package package) async {
     if (!_available) return false;
     try {
-      final info = await Purchases.purchasePackage(package);
-      return _hasPro(info);
+      // purchases_flutter 9.0.0 renamed this to purchase(PurchaseParams) and
+      // changed the result from CustomerInfo directly to a PurchaseResult
+      // wrapping it alongside the StoreTransaction.
+      final result = await Purchases.purchase(PurchaseParams.package(package));
+      return _hasPro(result.customerInfo);
     } on PlatformException catch (e) {
       if (PurchasesErrorHelper.getErrorCode(e) ==
           PurchasesErrorCode.purchaseCancelledError) {
