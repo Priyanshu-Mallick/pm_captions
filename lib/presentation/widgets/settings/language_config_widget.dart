@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/caption_language.dart';
 import 'settings_section_widget.dart';
 
 class LanguageConfigWidget extends StatefulWidget {
@@ -15,7 +16,7 @@ class LanguageConfigWidget extends StatefulWidget {
 }
 
 class _LanguageConfigWidgetState extends State<LanguageConfigWidget> {
-  String _defaultLanguage = 'en';
+  CaptionLanguage _defaultLanguage = CaptionLanguage.english;
 
   @override
   void initState() {
@@ -25,10 +26,12 @@ class _LanguageConfigWidgetState extends State<LanguageConfigWidget> {
 
   Future<void> _loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    final lang = prefs.getString('default_language') ?? 'en';
+    final language = CaptionLanguage.fromStorageKey(
+      prefs.getString('default_language'),
+    );
     if (mounted) {
       setState(() {
-        _defaultLanguage = lang;
+        _defaultLanguage = language;
       });
     }
   }
@@ -47,7 +50,7 @@ class _LanguageConfigWidgetState extends State<LanguageConfigWidget> {
             border: Border.all(color: AppColors.divider),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<CaptionLanguage>(
               value: _defaultLanguage,
               isExpanded: true,
               dropdownColor: AppColors.surface,
@@ -56,11 +59,11 @@ class _LanguageConfigWidgetState extends State<LanguageConfigWidget> {
                 fontSize: 14,
               ),
               items:
-                  AppStrings.supportedLanguages.entries
+                  CaptionLanguage.values
                       .map(
-                        (e) => DropdownMenuItem(
-                          value: e.key,
-                          child: Text(e.value),
+                        (language) => DropdownMenuItem(
+                          value: language,
+                          child: Text(language.displayName),
                         ),
                       )
                       .toList(),
@@ -68,7 +71,7 @@ class _LanguageConfigWidgetState extends State<LanguageConfigWidget> {
                 if (value != null) {
                   setState(() => _defaultLanguage = value);
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.setString('default_language', value);
+                  await prefs.setString('default_language', value.storageKey);
                 }
               },
             ),

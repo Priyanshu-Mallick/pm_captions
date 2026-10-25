@@ -46,7 +46,8 @@ class ApiException extends AppException {
 
   /// True for 4xx errors that are caused by a bad request or invalid key,
   /// not by a bug in the app. These should NOT be reported to Sentry.
-  bool get isClientError => statusCode != null && statusCode! >= 400 && statusCode! < 500;
+  bool get isClientError =>
+      statusCode != null && statusCode! >= 400 && statusCode! < 500;
 
   @override
   String get message => 'API error: statusCode=$statusCode, body=$responseBody';
@@ -184,6 +185,21 @@ class CancellationException extends AppException {
   String get userFriendlyMessage => 'Operation cancelled';
 }
 
+/// Thrown when a native-script transcript cannot be converted to Roman Hinglish.
+class HinglishConversionException extends AppException {
+  final String? details;
+
+  HinglishConversionException({this.details});
+
+  @override
+  String get message =>
+      'Hinglish conversion failed: ${details ?? "unknown error"}';
+
+  @override
+  String get userFriendlyMessage =>
+      'Could not convert the captions to Roman Hinglish. Please retry.';
+}
+
 /// Thrown when a generic/unexpected error occurs.
 class GenericException extends AppException {
   final String? details;
@@ -196,4 +212,3 @@ class GenericException extends AppException {
   @override
   String get userFriendlyMessage => 'Something went wrong. Please try again.';
 }
-

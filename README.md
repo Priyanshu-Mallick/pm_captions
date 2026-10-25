@@ -101,12 +101,14 @@ This is the core AI step. Once the user provides their Groq API key and taps **T
 
 2. **Groq Whisper API** — The WAV file is sent to Groq's `whisper-large-v3` model (`POST /audio/transcriptions`) with `response_format: verbose_json` and `timestamp_granularities: [word, segment]`. This returns every single word with its precise start and end timestamp. The API call retries up to 3 times with exponential backoff (2s, 4s) on failure.
 
-3. **Caption Grouping** — Raw words from the API are grouped into displayable captions by `CaptionParserUtils`. It splits on:
+3. **Optional Hinglish Conversion** — When **Hinglish (Roman Hindi + English)** is selected, Whisper first transcribes with the Hindi language code. The timestamped words are then sent to Groq's `openai/gpt-oss-20b` model for strict, one-word-per-word transliteration. Hindi is converted to Latin script, existing English is retained, and the original Whisper timestamps remain unchanged. This uses an additional text-model request and therefore consumes additional Groq quota. If conversion fails or returns a structurally invalid result, processing stops instead of silently returning native-script captions.
+
+4. **Caption Grouping** — Raw or Romanized words are grouped into displayable captions by `CaptionParserUtils`. It splits on:
    - Max words per line (default 5)
    - Natural pauses longer than 0.5 seconds between words
    - Sentence-ending punctuation (`.`, `?`, `!`)
 
-4. **Save to SQLite** — The project and all captions (with word-level timestamps) are saved to a local SQLite database.
+5. **Save to SQLite** — The project and all captions (with word-level timestamps) are saved to a local SQLite database.
 
 ---
 

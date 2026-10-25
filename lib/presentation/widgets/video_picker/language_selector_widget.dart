@@ -4,10 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/caption_language.dart';
 
 class LanguageSelectorWidget extends StatelessWidget {
-  final String selectedLanguage;
-  final ValueChanged<String?> onChanged;
+  final CaptionLanguage selectedLanguage;
+  final ValueChanged<CaptionLanguage?> onChanged;
 
   const LanguageSelectorWidget({
     super.key,
@@ -37,7 +38,7 @@ class LanguageSelectorWidget extends StatelessWidget {
             border: Border.all(color: AppColors.divider),
           ),
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: DropdownButton<CaptionLanguage>(
               value: selectedLanguage,
               isExpanded: true,
               dropdownColor: AppColors.surface,
@@ -46,11 +47,11 @@ class LanguageSelectorWidget extends StatelessWidget {
                 fontSize: 14,
               ),
               items:
-                  AppStrings.supportedLanguages.entries
+                  CaptionLanguage.values
                       .map(
-                        (e) => DropdownMenuItem(
-                          value: e.key,
-                          child: Text(e.value),
+                        (language) => DropdownMenuItem(
+                          value: language,
+                          child: Text(language.displayName),
                         ),
                       )
                       .toList(),

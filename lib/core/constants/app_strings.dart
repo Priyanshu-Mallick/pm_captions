@@ -32,6 +32,8 @@ class AppStrings {
   static const String extractingAudio = 'Extracting audio...';
   static const String transcribingSpeech =
       'Transcribing speech with Groq Whisper AI...';
+  static const String convertingToHinglish =
+      'Converting captions to Roman Hinglish...';
   static const String generatingCaptions = 'Generating captions...';
   static const String finalizing = 'Finalizing...';
   static const String cancel = 'Cancel';
@@ -123,20 +125,6 @@ class AppStrings {
   static const String genericError = 'Something went wrong. Please try again.';
 
   // ── Languages ─────────────────────────────────────────────────────
-  static const Map<String, String> supportedLanguages = {
-    'en': 'English',
-    'es': 'Spanish',
-    'fr': 'French',
-    'de': 'German',
-    'pt': 'Portuguese',
-    'it': 'Italian',
-    'ja': 'Japanese',
-    'ko': 'Korean',
-    'zh': 'Chinese',
-    'ar': 'Arabic',
-    'hi': 'Hindi',
-  };
-
   // ── Onboarding ────────────────────────────────────────────────────
   static const String onboardingTitle1 = 'Add AI Captions';
   static const String onboardingDesc1 =

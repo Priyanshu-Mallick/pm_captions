@@ -29,6 +29,17 @@ class ProcessingStepsWidget extends StatelessWidget {
           isDone:
               provider.currentState.index > ProcessingState.transcribing.index,
         ),
+        if (provider.isHinglishProcessing) ...[
+          const SizedBox(height: 12),
+          _StepItem(
+            label: AppStrings.convertingToHinglish,
+            isActive:
+                provider.currentState == ProcessingState.convertingToHinglish,
+            isDone:
+                provider.currentState.index >
+                ProcessingState.convertingToHinglish.index,
+          ),
+        ],
         const SizedBox(height: 12),
         _StepItem(
           label: AppStrings.generatingCaptions,

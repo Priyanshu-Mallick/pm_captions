@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../core/constants/caption_language.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/home/home_screen.dart';
@@ -35,7 +36,9 @@ final GoRouter appRouter = GoRouter(
         return ProcessingScreen(
           videoPath: extra['videoPath'] as String,
           apiKey: extra['apiKey'] as String,
-          language: extra['language'] as String,
+          language: CaptionLanguage.fromStorageKey(
+            extra['language'] as String?,
+          ),
         );
       },
     ),

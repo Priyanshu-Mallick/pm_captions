@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/caption_language.dart';
 import '../../../data/datasources/whisper_datasource.dart';
 import '../../providers/video_provider.dart';
 import '../../widgets/common/custom_button.dart';
@@ -25,19 +27,26 @@ class VideoPickerScreen extends StatefulWidget {
 
 class _VideoPickerScreenState extends State<VideoPickerScreen> {
   final _apiKeyController = TextEditingController();
-  String _selectedLanguage = 'en';
+  CaptionLanguage _selectedLanguage = CaptionLanguage.english;
 
   @override
   void initState() {
     super.initState();
-    _loadApiKey();
+    _loadPreferences();
   }
 
-  Future<void> _loadApiKey() async {
+  Future<void> _loadPreferences() async {
     final key = await WhisperDatasource.getApiKey();
-    if (key != null && key.isNotEmpty && mounted) {
+    final prefs = await SharedPreferences.getInstance();
+    final language = CaptionLanguage.fromStorageKey(
+      prefs.getString('default_language'),
+    );
+    if (mounted) {
       setState(() {
-        _apiKeyController.text = key;
+        if (key != null && key.isNotEmpty) {
+          _apiKeyController.text = key;
+        }
+        _selectedLanguage = language;
       });
     }
   }
@@ -159,7 +168,7 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
       extra: {
         'videoPath': videoProvider.selectedVideoPath!,
         'apiKey': apiKey,
-        'language': _selectedLanguage,
+        'language': _selectedLanguage.storageKey,
       },
     );
   }

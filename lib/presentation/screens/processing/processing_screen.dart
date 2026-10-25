@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/constants/app_strings.dart';
+import '../../../core/constants/caption_language.dart';
 import '../../../data/models/project_model.dart';
 import '../../../data/repositories/project_repository.dart';
 import '../../providers/processing_provider.dart';
@@ -19,7 +20,7 @@ import '../../widgets/processing/progress_circle_widget.dart';
 class ProcessingScreen extends StatefulWidget {
   final String videoPath;
   final String apiKey;
-  final String language;
+  final CaptionLanguage language;
 
   const ProcessingScreen({
     super.key,

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_strings.dart';
+import '../../core/constants/caption_language.dart';
 import '../../core/errors/error_reporter.dart';
 import '../../core/errors/exceptions.dart';
 import '../../core/utils/app_logger.dart';
@@ -16,6 +18,7 @@ enum ProcessingState {
   idle,
   extractingAudio,
   transcribing,
+  convertingToHinglish,
   groupingCaptions,
   done,
   error,
@@ -25,9 +28,13 @@ enum ProcessingState {
 class ProcessingProvider extends ChangeNotifier {
   static final _log = appLogger;
   final TranscriptionRepository _transcriptionRepo;
+  final Future<String> Function(String videoPath) _audioExtractor;
 
-  ProcessingProvider({TranscriptionRepository? transcriptionRepo})
-    : _transcriptionRepo = transcriptionRepo ?? TranscriptionRepository();
+  ProcessingProvider({
+    TranscriptionRepository? transcriptionRepo,
+    Future<String> Function(String videoPath)? audioExtractor,
+  }) : _transcriptionRepo = transcriptionRepo ?? TranscriptionRepository(),
+       _audioExtractor = audioExtractor ?? FFmpegUtils.extractAudio;
 
   // ── State ─────────────────────────────────────────────────────────
   ProcessingState _currentState = ProcessingState.idle;
@@ -38,6 +45,7 @@ class ProcessingProvider extends ChangeNotifier {
   List<WordTimestampModel> _rawWords = [];
   String? _audioPath;
   bool _isCancelled = false;
+  bool _isHinglishProcessing = false;
 
   // ── Getters ───────────────────────────────────────────────────────
   ProcessingState get currentState => _currentState;
@@ -46,6 +54,7 @@ class ProcessingProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   List<CaptionModel> get captions => _captions;
   List<WordTimestampModel> get rawWords => _rawWords;
+  bool get isHinglishProcessing => _isHinglishProcessing;
   bool get isProcessing =>
       _currentState != ProcessingState.idle &&
       _currentState != ProcessingState.done &&
@@ -57,11 +66,12 @@ class ProcessingProvider extends ChangeNotifier {
   Future<void> startProcessing({
     required String videoPath,
     required String apiKey,
-    String? language,
+    required CaptionLanguage language,
     CaptionStyleModel style = const CaptionStyleModel(),
   }) async {
     _isCancelled = false;
     _errorMessage = null;
+    _isHinglishProcessing = language.requiresRomanization;
 
     try {
       // Save API key
@@ -76,7 +86,7 @@ class ProcessingProvider extends ChangeNotifier {
 
       if (_isCancelled) return;
 
-      _audioPath = await FFmpegUtils.extractAudio(videoPath);
+      _audioPath = await _audioExtractor(videoPath);
       _updateState(ProcessingState.extractingAudio, 0.3, 'Audio extracted ✓');
 
       // Step 2: Transcribe with Whisper
@@ -102,33 +112,51 @@ class ProcessingProvider extends ChangeNotifier {
         }
       });
 
-      final result = await _transcriptionRepo.transcribe(
-        _audioPath!,
-        language: language,
-        style: style,
-      );
+      late final TranscriptionResult result;
+      try {
+        result = await _transcriptionRepo.transcribe(
+          _audioPath!,
+          language: language,
+          style: style,
+          onHinglishConversionStarted: () {
+            _updateState(
+              ProcessingState.convertingToHinglish,
+              0.8,
+              AppStrings.convertingToHinglish,
+            );
+          },
+        );
+      } finally {
+        progressTimer.cancel();
+      }
 
-      progressTimer.cancel(); // Cancel timer when done
-
+      if (_isCancelled) return;
       _rawWords = result.rawWords;
-      _updateState(
-        ProcessingState.transcribing,
-        0.8,
-        'Transcription complete ✓',
-      );
+      if (language.requiresRomanization) {
+        _updateState(
+          ProcessingState.convertingToHinglish,
+          0.9,
+          'Roman Hinglish conversion complete ✓',
+        );
+      } else {
+        _updateState(
+          ProcessingState.transcribing,
+          0.8,
+          'Transcription complete ✓',
+        );
+      }
 
       // Step 3: Generate captions
-      if (_isCancelled) return;
       _updateState(
         ProcessingState.groupingCaptions,
-        0.85,
+        0.92,
         'Generating captions...',
       );
 
       _captions = result.captions;
       _updateState(
         ProcessingState.groupingCaptions,
-        0.95,
+        0.97,
         'Captions generated ✓',
       );
 
@@ -152,7 +180,8 @@ class ProcessingProvider extends ChangeNotifier {
       _log.e('Processing failed: ${e.message}');
       // Invalid key / missing audio / user content errors are user-configuration or input issues —
       // do not clutter Sentry with them. Only report genuine unexpected failures.
-      final isUserError = e is InvalidApiKeyException ||
+      final isUserError =
+          e is InvalidApiKeyException ||
           e is NoApiKeyException ||
           e is NoAudioTrackException ||
           e is UnsupportedVideoFormatException ||
@@ -161,6 +190,7 @@ class ProcessingProvider extends ChangeNotifier {
           e is InsufficientStorageException ||
           e is PermissionDeniedException ||
           e is CancellationException ||
+          e is HinglishConversionException ||
           (e is ApiException && e.isClientError);
       if (!isUserError) {
         ErrorReporter.captureException(e, stack: stack);
@@ -198,6 +228,7 @@ class ProcessingProvider extends ChangeNotifier {
     _rawWords = [];
     _audioPath = null;
     _isCancelled = false;
+    _isHinglishProcessing = false;
     notifyListeners();
   }
 
